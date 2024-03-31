@@ -1,6 +1,9 @@
 import tkinter as tk
-
+from classification import *
 from tkinter import filedialog
+
+global train
+global test
 
 class checkOptions(tk.Frame):
     def __init__(self, parent=None, picks=[], anchor=tk.W):
@@ -13,8 +16,6 @@ class checkOptions(tk.Frame):
             self.vars.append(var)
     def state(self):
         return map((lambda var: var.get()), self.vars)
-    
-
 
 class Classification(tk.Frame):
     def __init__(self,parent,controller):
@@ -31,10 +32,55 @@ class Classification(tk.Frame):
 
         tk.Button(self, text='Back',command=lambda: controller.show_frame(Start)).pack(side="bottom")
         tk.Button(self, text='Peek', command=self.allstates).pack(side="bottom")
+        self.exe=tk.Button(self, text='Execute',command=self.execute).pack(side="bottom")
 
 
     def allstates(self): 
-        print(list(self.mloptions.state()), list(self.tloptions.state()))
+        ml=list(self.mloptions.state())
+        tl=list(self.tloptions.state())
+        res=[ml,tl]
+        return res
+
+    def executeML(self,chosen,item):
+        for i in range(len(chosen)):
+            if chosen[i]==1:
+                if i==0:
+                    naive(item)
+                elif i==1:
+                    decision(item)
+                elif i==2:
+                    forest(item)
+                else:
+                    bag(item)
+        
+    def execute(self):
+        global train
+        global test
+        chosen=self.allstates()
+        item=readimage(train,test)
+        self.executeML(chosen[0],item)
+
+        tl=chosen[1]
+        if 1 in tl:
+            images_dict=readimageTL(train)
+            for i in range(len(tl)):
+                if tl[i]==1:
+                    
+                    if i==0:
+                        item=mobnet(images_dict,test)
+                        self.executeML(chosen[0],item)
+                    elif i==1:
+                        item=resnet(images_dict,test)
+                        self.executeML(chosen[0],item)
+                    elif i==2:
+                        item=vgg16(images_dict,test)
+                        self.executeML(chosen[0],item)
+                    else:
+                        item=vgg19(images_dict,test)
+                        self.executeML(chosen[0],item)
+
+        
+
 class Clustering(tk.Frame):
     def __init__(self,parent,controller):
         tk.Frame.__init__(self,parent)
@@ -51,10 +97,18 @@ class Clustering(tk.Frame):
         tk.Button(self, text='Back',command=lambda: controller.show_frame(Start)).pack(side="bottom")
         tk.Button(self, text='Peek', command=self.allstates).pack(side="bottom")
 
-
     def allstates(self): 
-        print(list(self.mloptions.state()), list(self.tloptions.state()))
+        return list(self.mloptions.state(), self.tloptions.state())
 
+    '''def proceed(self,file):
+        chosen=self.allstates()
+        for i in chosen:
+            for j in i:
+                if i==
+                if j[0]==1:
+                    kmeans()
+                
+        pass'''
   
 class Container(tk.Tk):
     def __init__(self,*args,**kwargs):
@@ -81,7 +135,7 @@ class Start(tk.Frame):
         f.pack(side="top",expand=True)
         self.flag=False
         tk.Label(f,text="Upload an image dataset :").pack(side="left",anchor="w")
-        tk.Button(f,text="Browse ",command=lambda:self.openfile(controller)).pack(side="right",anchor="e")
+        tk.Button(f,text="Browse ",command=self.openfile).pack(side="right",anchor="e")
 
         f=tk.LabelFrame(self,text="Select an application --",pady=10,padx=10)
         f.pack(side="top",fill="both",expand=True,anchor="w",padx=10,pady=10)
@@ -117,10 +171,13 @@ class Start(tk.Frame):
                 self.t.config(text="")
                 go=Clustering
             controller.show_frame(go)
-
   
-    def openfile(self,controller):
-        self.filename=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Downloads",title="Select a file", filetypes=(("All Files", "*.*"),("CSV Files", "*.csv")))
+    def openfile(self):
+        global train
+        global test
+        train=filedialog.askdirectory(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select a file for training")
+        test=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select a file for testing", filetypes=(("All Files", "*.*"),("CSV files",".csv")))
+        
         self.t.config(text="File is successfully loaded")
         self.flag=True
 
