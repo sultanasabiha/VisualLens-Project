@@ -1,7 +1,7 @@
 import tkinter as tk
 from classification import *
 from tkinter import filedialog
-
+from visualize import *
 global train
 global test
 
@@ -26,60 +26,85 @@ class Classification(tk.Frame):
         self.mloptions.config(relief=tk.GROOVE, bd=2,padx=10,pady=10)
 
         tk.Label(self,text="Transfer Learning Algorithms :").pack(side="top",anchor="w",pady=(10,0))
-        self.tloptions = checkOptions(self, ["MobileNet Model","ResNet50","VGG16","VGG19"])
+        self.tloptions = checkOptions(self,["MobileNet Model","ResNet50","VGG16","VGG19"])
         self.tloptions.pack(side="top",fill="x",anchor="w")
         self.tloptions.config(relief=tk.GROOVE, bd=2,padx=10,pady=10)
 
+        tk.Button(self, text='Execute',command=self.execute).pack(side="bottom")
         tk.Button(self, text='Back',command=lambda: controller.show_frame(Start)).pack(side="bottom")
-        tk.Button(self, text='Peek', command=self.allstates).pack(side="bottom")
-        self.exe=tk.Button(self, text='Execute',command=self.execute).pack(side="bottom")
-
-
+        self.flag=False
+        self.cobj=Classify()
+        self.vis=None
+        self.names=[]
+        self.probas_list=[]
+        self.accs=[]
     def allstates(self): 
         ml=list(self.mloptions.state())
         tl=list(self.tloptions.state())
         res=[ml,tl]
         return res
 
-    def executeML(self,chosen,item):
-        for i in range(len(chosen)):
-            if chosen[i]==1:
-                if i==0:
-                    naive(item)
-                elif i==1:
-                    decision(item)
-                elif i==2:
-                    forest(item)
-                else:
-                    bag(item)
-        
-    def execute(self):
+    def executeML(self,ml,item):
         global train
         global test
-        chosen=self.allstates()
-        item=readimage(train,test)
-        self.executeML(chosen[0],item)
 
+        for i in range(len(ml)):
+            if ml[i]==1:
+                if i==0:
+                    nbc,ny_pred,ny_probas,nacc,nname,ncategory,x,y,y_test=self.cobj.naive(item)
+                    self.vis.plotIndi(nbc,ny_pred,ny_probas,nname,ncategory,x,y,y_test)
+                    self.names.append(nname)
+                    self.probas_list.append(ny_probas)
+                    self.accs.append(nacc)
+                elif i==1:
+                    dtc,dy_pred,dy_probas,dacc,dname,dcategory,x,y,y_test=self.cobj.decision(item)
+                    self.vis.plotIndi(dtc,dy_pred,dy_probas,dname,dcategory,x,y,y_test)
+                    self.names.append(dname)
+                    self.probas_list.append(dy_probas)
+                    self.accs.append(dacc)
+                elif i==2:
+                    rfc,fy_pred,fy_probas,facc,fname,fcategory,x,y,y_test=self.cobj.forest(item)
+                    self.vis.plotIndi(rfc,fy_pred,fy_probas,fname,fcategory,x,y,y_test)
+                    self.names.append(fname)
+                    self.probas_list.append(fy_probas)
+                    self.accs.append(facc)
+
+                else:
+                    bc,by_pred,by_probas,bacc,bname,bcategory=self.cobj.bag(item)
+                    self.vis.plotIndi(bc,by_pred,by_probas,bname,bcategory,x,y,y_test)
+                    self.names.append(bname)
+                    self.probas_list.append(by_probas)
+                    self.accs.append(bacc)
+        return y_test
+    def execute(self):
+        self.vis=Visualize()
+        chosen=self.allstates()
+        ml=chosen[0]
         tl=chosen[1]
-        if 1 in tl:
-            images_dict=readimageTL(train)
+        global train
+        global test
+
+        if 1 in ml:
+            item=self.cobj.readimage(train,test)        
+            self.executeML(ml,item)
+        if 1 in tl:    
+            images_dict=self.cobj.readimageTL(train)
             for i in range(len(tl)):
                 if tl[i]==1:
-                    
                     if i==0:
-                        item=mobnet(images_dict,test)
-                        self.executeML(chosen[0],item)
+                        item=self.cobj.mobnet(images_dict,test)
+                        y=self.executeML(chosen[0],item)
                     elif i==1:
-                        item=resnet(images_dict,test)
-                        self.executeML(chosen[0],item)
+                        item=self.cobj.resnet(images_dict,test)
+                        y=self.executeML(chosen[0],item)
                     elif i==2:
-                        item=vgg16(images_dict,test)
-                        self.executeML(chosen[0],item)
+                        item=self.cobj.vgg16(images_dict,test)
+                        y=self.executeML(chosen[0],item)
                     else:
-                        item=vgg19(images_dict,test)
-                        self.executeML(chosen[0],item)
-
-        
+                        item=self.cobj.vgg19(images_dict,test)
+                        y=self.executeML(chosen[0],item)
+        if len(self.accs)>1:
+            self.vis.plotComp(self.names,self.accs)
 
 class Clustering(tk.Frame):
     def __init__(self,parent,controller):
