@@ -2,7 +2,8 @@ import tkinter as tk
 from classification import *
 from tkinter import filedialog
 from visualize import *
-global train
+global category_file
+global image_dir
 global test
 
 class checkOptions(tk.Frame):
@@ -32,12 +33,10 @@ class Classification(tk.Frame):
 
         tk.Button(self, text='Execute',command=self.execute).pack(side="bottom")
         tk.Button(self, text='Back',command=lambda: controller.show_frame(Start)).pack(side="bottom")
-        self.flag=False
-        self.cobj=Classify()
+        self.count=0
+        self.cobj=None
         self.vis=None
-        self.names=[]
-        self.probas_list=[]
-        self.accs=[]
+
     def allstates(self): 
         ml=list(self.mloptions.state())
         tl=list(self.tloptions.state())
@@ -45,66 +44,58 @@ class Classification(tk.Frame):
         return res
 
     def executeML(self,ml,item):
-        global train
-        global test
-
         for i in range(len(ml)):
             if ml[i]==1:
                 if i==0:
-                    nbc,ny_pred,ny_probas,nacc,nname,ncategory,x,y,y_test=self.cobj.naive(item)
+                    nbc,ny_pred,ny_probas,nname,ncategory,x,y,y_test=self.cobj.naive(item)
                     self.vis.plotIndi(nbc,ny_pred,ny_probas,nname,ncategory,x,y,y_test)
-                    self.names.append(nname)
-                    self.probas_list.append(ny_probas)
-                    self.accs.append(nacc)
+                    self.count+=1
                 elif i==1:
-                    dtc,dy_pred,dy_probas,dacc,dname,dcategory,x,y,y_test=self.cobj.decision(item)
+                    dtc,dy_pred,dy_probas,dname,dcategory,x,y,y_test=self.cobj.decision(item)
                     self.vis.plotIndi(dtc,dy_pred,dy_probas,dname,dcategory,x,y,y_test)
-                    self.names.append(dname)
-                    self.probas_list.append(dy_probas)
-                    self.accs.append(dacc)
+                    self.count+=1
                 elif i==2:
-                    rfc,fy_pred,fy_probas,facc,fname,fcategory,x,y,y_test=self.cobj.forest(item)
+                    rfc,fy_pred,fy_probas,fname,fcategory,x,y,y_test=self.cobj.forest(item)
                     self.vis.plotIndi(rfc,fy_pred,fy_probas,fname,fcategory,x,y,y_test)
-                    self.names.append(fname)
-                    self.probas_list.append(fy_probas)
-                    self.accs.append(facc)
-
+                    self.count+=1
                 else:
-                    bc,by_pred,by_probas,bacc,bname,bcategory=self.cobj.bag(item)
+                    bc,by_pred,by_probas,bname,bcategory,x,y,y_test=self.cobj.bag(item)
                     self.vis.plotIndi(bc,by_pred,by_probas,bname,bcategory,x,y,y_test)
-                    self.names.append(bname)
-                    self.probas_list.append(by_probas)
-                    self.accs.append(bacc)
-        return y_test
+                    self.count+=1
     def execute(self):
+        global category_file
+        global image_dir
+        global test
+        self.cobj=Classify(category_file,image_dir,test)
         self.vis=Visualize()
         chosen=self.allstates()
         ml=chosen[0]
         tl=chosen[1]
-        global train
-        global test
 
         if 1 in ml:
-            item=self.cobj.readimage(train,test)        
+            item=self.cobj.readimage()        
             self.executeML(ml,item)
         if 1 in tl:    
-            images_dict=self.cobj.readimageTL(train)
             for i in range(len(tl)):
                 if tl[i]==1:
                     if i==0:
-                        item=self.cobj.mobnet(images_dict,test)
-                        y=self.executeML(chosen[0],item)
+                        item=self.cobj.mobnet()
+                        self.executeML(chosen[0],item)
+                        self.count+=1
                     elif i==1:
-                        item=self.cobj.resnet(images_dict,test)
-                        y=self.executeML(chosen[0],item)
+                        item=self.cobj.resnet()
+                        self.executeML(chosen[0],item)
+                        self.count+=1
                     elif i==2:
-                        item=self.cobj.vgg16(images_dict,test)
-                        y=self.executeML(chosen[0],item)
+                        item=self.cobj.vgg16()
+                        self.executeML(chosen[0],item)
+                        self.count+=1
                     else:
-                        item=self.cobj.vgg19(images_dict,test)
-                        y=self.executeML(chosen[0],item)
-        if len(self.accs)>1:
-            self.vis.plotComp(self.names,self.accs)
+                        item=self.cobj.vgg19()
+                        self.executeML(chosen[0],item)
+                        self.count+=1
+        if self.count>1:
+            self.vis.plotComp()
 
 class Clustering(tk.Frame):
     def __init__(self,parent,controller):
@@ -198,10 +189,12 @@ class Start(tk.Frame):
             controller.show_frame(go)
   
     def openfile(self):
-        global train
+        global category_file
+        global image_dir
         global test
-        train=filedialog.askdirectory(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select a file for training")
-        test=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select a file for testing", filetypes=(("All Files", "*.*"),("CSV files",".csv")))
+        image_dir=filedialog.askdirectory(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select folder containing images: ")
+        category_file=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select file containing labels", filetypes=(("All Files", "*.*"),("Text Files",".txt"),("Word Files",".doc")))
+        test=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select a file for testing", filetypes=(("All Files", "*.*"),("JPG",".jpg"),("PNG",".png")))
         
         self.t.config(text="File is successfully loaded")
         self.flag=True
