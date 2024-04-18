@@ -1,8 +1,9 @@
 import tkinter as tk
 from classification import *
 from tkinter import filedialog
-
-global train
+from visualize import *
+global category_file
+global image_dir
 global test
 
 class checkOptions(tk.Frame):
@@ -26,14 +27,15 @@ class Classification(tk.Frame):
         self.mloptions.config(relief=tk.GROOVE, bd=2,padx=10,pady=10)
 
         tk.Label(self,text="Transfer Learning Algorithms :").pack(side="top",anchor="w",pady=(10,0))
-        self.tloptions = checkOptions(self, ["MobileNet Model","ResNet50","VGG16","VGG19"])
+        self.tloptions = checkOptions(self,["MobileNet Model","ResNet50","VGG16","VGG19"])
         self.tloptions.pack(side="top",fill="x",anchor="w")
         self.tloptions.config(relief=tk.GROOVE, bd=2,padx=10,pady=10)
 
+        tk.Button(self, text='Execute',command=self.execute).pack(side="bottom")
         tk.Button(self, text='Back',command=lambda: controller.show_frame(Start)).pack(side="bottom")
-        tk.Button(self, text='Peek', command=self.allstates).pack(side="bottom")
-        self.exe=tk.Button(self, text='Execute',command=self.execute).pack(side="bottom")
-
+        self.count=0
+        self.cobj=None
+        self.vis=None
 
     def allstates(self): 
         ml=list(self.mloptions.state())
@@ -41,45 +43,59 @@ class Classification(tk.Frame):
         res=[ml,tl]
         return res
 
-    def executeML(self,chosen,item):
-        for i in range(len(chosen)):
-            if chosen[i]==1:
+    def executeML(self,ml,item):
+        for i in range(len(ml)):
+            if ml[i]==1:
                 if i==0:
-                    naive(item)
+                    nbc,ny_pred,ny_probas,nname,ncategory,x,y,y_test=self.cobj.naive(item)
+                    self.vis.plotIndi(nbc,ny_pred,ny_probas,nname,ncategory,x,y,y_test)
+                    self.count+=1
                 elif i==1:
-                    decision(item)
+                    dtc,dy_pred,dy_probas,dname,dcategory,x,y,y_test=self.cobj.decision(item)
+                    self.vis.plotIndi(dtc,dy_pred,dy_probas,dname,dcategory,x,y,y_test)
+                    self.count+=1
                 elif i==2:
-                    forest(item)
+                    rfc,fy_pred,fy_probas,fname,fcategory,x,y,y_test=self.cobj.forest(item)
+                    self.vis.plotIndi(rfc,fy_pred,fy_probas,fname,fcategory,x,y,y_test)
+                    self.count+=1
                 else:
-                    bag(item)
-        
+                    bc,by_pred,by_probas,bname,bcategory,x,y,y_test=self.cobj.bag(item)
+                    self.vis.plotIndi(bc,by_pred,by_probas,bname,bcategory,x,y,y_test)
+                    self.count+=1
     def execute(self):
-        global train
+        global category_file
+        global image_dir
         global test
+        self.cobj=Classify(category_file,image_dir,test)
+        self.vis=Visualize()
         chosen=self.allstates()
-        item=readimage(train,test)
-        self.executeML(chosen[0],item)
-
+        ml=chosen[0]
         tl=chosen[1]
-        if 1 in tl:
-            images_dict=readimageTL(train)
+
+        if 1 in ml:
+            item=self.cobj.readimage()        
+            self.executeML(ml,item)
+        if 1 in tl:    
             for i in range(len(tl)):
                 if tl[i]==1:
-                    
                     if i==0:
-                        item=mobnet(images_dict,test)
+                        item=self.cobj.mobnet()
                         self.executeML(chosen[0],item)
+                        self.count+=1
                     elif i==1:
-                        item=resnet(images_dict,test)
+                        item=self.cobj.resnet()
                         self.executeML(chosen[0],item)
+                        self.count+=1
                     elif i==2:
-                        item=vgg16(images_dict,test)
+                        item=self.cobj.vgg16()
                         self.executeML(chosen[0],item)
+                        self.count+=1
                     else:
-                        item=vgg19(images_dict,test)
+                        item=self.cobj.vgg19()
                         self.executeML(chosen[0],item)
-
-        
+                        self.count+=1
+        if self.count>1:
+            self.vis.plotComp()
 
 class Clustering(tk.Frame):
     def __init__(self,parent,controller):
@@ -173,10 +189,12 @@ class Start(tk.Frame):
             controller.show_frame(go)
   
     def openfile(self):
-        global train
+        global category_file
+        global image_dir
         global test
-        train=filedialog.askdirectory(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select a file for training")
-        test=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select a file for testing", filetypes=(("All Files", "*.*"),("CSV files",".csv")))
+        image_dir=filedialog.askdirectory(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select folder containing images: ")
+        category_file=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select file containing labels", filetypes=(("All Files", "*.*"),("Text Files",".txt"),("Word Files",".doc")))
+        test=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select a file for testing", filetypes=(("All Files", "*.*"),("JPG",".jpg"),("PNG",".png")))
         
         self.t.config(text="File is successfully loaded")
         self.flag=True
