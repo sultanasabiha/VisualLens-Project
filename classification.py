@@ -4,7 +4,6 @@ import cv2
 import os
 from keras.preprocessing import image as kimage
 
-np.random.seed(1000)
 from sklearn.model_selection import train_test_split
 
 class Classify:
