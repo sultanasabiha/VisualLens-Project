@@ -43,6 +43,7 @@ class Classify:
                     img_form = cv2.imread(img_path)
                     img_resized = cv2.resize(img_form, (500, 500))
                     #img = img.astype(np.float32) / 255.0  # Normalize pixel values
+                    img_resized=cv2.cvtColor(img_resized,cv2.COLOR_BGR2RGB)
                     images.append(img_resized.flatten())
                     labels.append(self.categories.index(category))
                 except Exception as e:

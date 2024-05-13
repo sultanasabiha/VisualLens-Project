@@ -2,9 +2,8 @@ import tkinter as tk
 from classification import *
 from tkinter import filedialog
 from visualize import *
-global category_file
-global image_dir
-global test
+from tkinter import messagebox
+from similarity import *
 
 class checkOptions(tk.Frame):
     def __init__(self, parent=None, picks=[], anchor=tk.W):
@@ -21,6 +20,10 @@ class checkOptions(tk.Frame):
 class Classification(tk.Frame):
     def __init__(self,parent,controller):
         tk.Frame.__init__(self,parent)
+        f=tk.Frame(self)
+        f.pack(side="top",expand=True,fill='x',pady=10)
+        tk.Label(f,text="Upload an image dataset :").pack(side="left",anchor="w",fill='x')
+        tk.Button(f,text="Browse ",command=self.openfile).pack(side="right",anchor="e")
         tk.Label(self,text="Machine Learning Algorithms :").pack(side="top",anchor="w")
         self.mloptions = checkOptions(self,["Naive Bayes Model","Decision Tree Model","Random Forest Model","Bagging Model"])
         self.mloptions.pack(side=tk.TOP,  fill=tk.X,anchor="w")
@@ -31,71 +34,91 @@ class Classification(tk.Frame):
         self.tloptions.pack(side="top",fill="x",anchor="w")
         self.tloptions.config(relief=tk.GROOVE, bd=2,padx=10,pady=10)
 
-        tk.Button(self, text='Execute',command=self.execute).pack(side="bottom")
+
+        self.exe=tk.Button(self, text='Execute',command=self.execute,state="disabled")
+        self.exe.pack(side="bottom")
         tk.Button(self, text='Back',command=lambda: controller.show_frame(Start)).pack(side="bottom")
         self.count=0
         self.cobj=None
         self.vis=None
+        self.t=tk.Label(self)
+        self.t.pack(side="top",fill="x",expand=True)
+
+        self.category_file,self.image_dir,self.test="","",""
 
     def allstates(self): 
         ml=list(self.mloptions.state())
         tl=list(self.tloptions.state())
         res=[ml,tl]
         return res
+    
+    def openfile(self):
+
+        self.image_dir=filedialog.askdirectory(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select folder containing images: ")
+        self.category_file=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select file containing labels", filetypes=(("All Files", "*.*"),("Text Files",".txt"),("Word Files",".doc")))
+        self.test=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select a file for testing", filetypes=(("All Files", "*.*"),("JPG",".jpg"),("PNG",".png")))
+  
+        if self.category_file =="" or self.image_dir =="" or self.test =="":
+            messagebox.showinfo("Warning","Dataset not uploaded")
+        else:
+            self.t.config(text="File is successfully loaded")
+            self.exe.config(state='normal')
 
     def executeML(self,ml,item):
         for i in range(len(ml)):
             if ml[i]==1:
                 if i==0:
                     nbc,ny_pred,ny_probas,nname,ncategory,x,y,y_test=self.cobj.naive(item)
-                    self.vis.plotIndi(nbc,ny_pred,ny_probas,nname,ncategory,x,y,y_test)
+                    self.vis.plot_results(nbc,ny_pred,ny_probas,nname,ncategory,x,y,y_test)
                     self.count+=1
                 elif i==1:
                     dtc,dy_pred,dy_probas,dname,dcategory,x,y,y_test=self.cobj.decision(item)
-                    self.vis.plotIndi(dtc,dy_pred,dy_probas,dname,dcategory,x,y,y_test)
+                    self.vis.plot_results(dtc,dy_pred,dy_probas,dname,dcategory,x,y,y_test)
                     self.count+=1
                 elif i==2:
                     rfc,fy_pred,fy_probas,fname,fcategory,x,y,y_test=self.cobj.forest(item)
-                    self.vis.plotIndi(rfc,fy_pred,fy_probas,fname,fcategory,x,y,y_test)
+                    self.vis.plot_results(rfc,fy_pred,fy_probas,fname,fcategory,x,y,y_test)
                     self.count+=1
                 else:
                     bc,by_pred,by_probas,bname,bcategory,x,y,y_test=self.cobj.bag(item)
-                    self.vis.plotIndi(bc,by_pred,by_probas,bname,bcategory,x,y,y_test)
+                    self.vis.plot_results(bc,by_pred,by_probas,bname,bcategory,x,y,y_test)
                     self.count+=1
     def execute(self):
-        global category_file
-        global image_dir
-        global test
-        self.cobj=Classify(category_file,image_dir,test)
-        self.vis=Visualize()
+        self.cobj=Classify(self.category_file,self.image_dir,self.test)
         chosen=self.allstates()
         ml=chosen[0]
         tl=chosen[1]
 
-        if 1 in ml:
-            item=self.cobj.readimage()        
-            self.executeML(ml,item)
-        if 1 in tl:    
-            for i in range(len(tl)):
-                if tl[i]==1:
-                    if i==0:
-                        item=self.cobj.mobnet()
-                        self.executeML(chosen[0],item)
-                        self.count+=1
-                    elif i==1:
-                        item=self.cobj.resnet()
-                        self.executeML(chosen[0],item)
-                        self.count+=1
-                    elif i==2:
-                        item=self.cobj.vgg16()
-                        self.executeML(chosen[0],item)
-                        self.count+=1
-                    else:
-                        item=self.cobj.vgg19()
-                        self.executeML(chosen[0],item)
-                        self.count+=1
-        if self.count>1:
-            self.vis.plotComp()
+        if 1 not in ml and 1 not in tl:
+            messagebox.showinfo("Warning","Please select an algorithm")
+        elif 1 not in ml and 1 in tl:
+            messagebox.showinfo("Warning","Please select an ML algorithm")
+        else:
+            self.vis=VisualizeClass()
+            if 1 in ml:
+                item=self.cobj.readimage()        
+                self.executeML(ml,item)
+            if 1 in tl:    
+                for i in range(len(tl)):
+                    if tl[i]==1:
+                        if i==0:
+                            item=self.cobj.mobnet()
+                            self.executeML(chosen[0],item)
+                            self.count+=1
+                        elif i==1:
+                            item=self.cobj.resnet()
+                            self.executeML(chosen[0],item)
+                            self.count+=1
+                        elif i==2:
+                            item=self.cobj.vgg16()
+                            self.executeML(chosen[0],item)
+                            self.count+=1
+                        else:
+                            item=self.cobj.vgg19()
+                            self.executeML(chosen[0],item)
+                            self.count+=1
+            if self.count>1:
+                self.vis.plot_comparison()
 
 class Clustering(tk.Frame):
     def __init__(self,parent,controller):
@@ -116,15 +139,6 @@ class Clustering(tk.Frame):
     def allstates(self): 
         return list(self.mloptions.state(), self.tloptions.state())
 
-    '''def proceed(self,file):
-        chosen=self.allstates()
-        for i in chosen:
-            for j in i:
-                if i==
-                if j[0]==1:
-                    kmeans()
-                
-        pass'''
   
 class Container(tk.Tk):
     def __init__(self,*args,**kwargs):
@@ -147,12 +161,6 @@ class Container(tk.Tk):
 class Start(tk.Frame):
     def __init__(self,parent,controller):
         tk.Frame.__init__(self,parent)
-        f=tk.Frame(self)
-        f.pack(side="top",expand=True)
-        self.flag=False
-        tk.Label(f,text="Upload an image dataset :").pack(side="left",anchor="w")
-        tk.Button(f,text="Browse ",command=self.openfile).pack(side="right",anchor="e")
-
         f=tk.LabelFrame(self,text="Select an application --",pady=10,padx=10)
         f.pack(side="top",fill="both",expand=True,anchor="w",padx=10,pady=10)
 
@@ -167,42 +175,26 @@ class Start(tk.Frame):
             tk.Radiobutton(f,text=app,variable=self.choice,value=value).pack(side="top",anchor="w")
         self.btn=tk.Button(self,text="Proceed",command=lambda:self.getchoice(controller))
         self.btn.pack(side="top",fill="x",expand=True)
-        self.t=tk.Label(self)
-        self.t.pack(side="top",fill="x",expand=True)
 
     def getchoice(self,controller):
-        if self.flag==False:
-            self.t.config(text="Dataset not uploaded")
-            self.flag=False
-        else:
-            if self.choice.get()==0:
-                self.t.config(text="Please select a task")
-            elif(self.choice.get()==1):
-                self.t.config(text="")
-                go=Similarity
-            elif(self.choice.get()==2):
-                self.t.config(text="")
-                go=Classification
-            elif(self.choice.get()==3):
-                self.t.config(text="")
-                go=Clustering
-            controller.show_frame(go)
+        if self.choice.get()==0:
+            messagebox.showinfo("Warning","Please select a task")
+        elif(self.choice.get()==1):
+            go=Similarity
+        elif(self.choice.get()==2):
+            go=Classification
+        elif(self.choice.get()==3):
+            go=Clustering
+        controller.show_frame(go)
   
-    def openfile(self):
-        global category_file
-        global image_dir
-        global test
-        image_dir=filedialog.askdirectory(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select folder containing images: ")
-        category_file=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select file containing labels", filetypes=(("All Files", "*.*"),("Text Files",".txt"),("Word Files",".doc")))
-        test=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select a file for testing", filetypes=(("All Files", "*.*"),("JPG",".jpg"),("PNG",".png")))
-        
-        self.t.config(text="File is successfully loaded")
-        self.flag=True
-
 
 class Similarity(tk.Frame):
     def __init__(self,parent,controller):
         tk.Frame.__init__(self,parent)
+        f=tk.Frame(self)
+        f.pack(side="top",expand=True,fill='x',pady=10)
+        tk.Label(f,text="Upload an image dataset :").pack(side="left",anchor="w",fill='x')
+        tk.Button(f,text="Browse ",command=self.openfile).pack(side="right",anchor="e")
         tk.Label(self,text="Machine Learning Algorithms :").pack(side="top",anchor="w")
         self.mloptions = checkOptions(self, ["Cosine Similarity","Euclidean Distance","Manhattan Distance"])
         self.mloptions.pack(side=tk.TOP,  fill=tk.X,anchor="w")
@@ -213,14 +205,91 @@ class Similarity(tk.Frame):
         self.tloptions.pack(side="top",fill="x",anchor="w")
         self.tloptions.config(relief=tk.GROOVE, bd=2,padx=10,pady=10)
 
+ 
+        self.exe=tk.Button(self, text='Execute',command=self.execute,state="disabled")
+        self.exe.pack(side="bottom")
         tk.Button(self, text='Back',command=lambda: controller.show_frame(Start)).pack(side="bottom")
-        tk.Button(self, text='Peek', command=self.allstates).pack(side="bottom")
+        self.count=0
+        self.sobj=None
+        self.vis=None
+        self.t=tk.Label(self)
+        self.t.pack(side="top",fill="x",expand=True)
 
+        self.image_dir,self.test="",""
 
     def allstates(self): 
-        print(list(self.mloptions.state()), list(self.tloptions.state()))
-
+        ml=list(self.mloptions.state())
+        tl=list(self.tloptions.state())
+        res=[ml,tl]
+        return res
     
+    def openfile(self):
+
+        self.image_dir=filedialog.askdirectory(initialdir="c:/Users/Sabiha/Desktop/Project",title="Select folder containing images: ")
+        self.test=filedialog.askopenfilename(initialdir="c:/Users/Sabiha/Desktop/Project",title="Select a file for testing", filetypes=(("All Files", "*.*"),("JPG",".jpg"),("PNG",".png")))
+  
+        if self.image_dir =="" or self.test =="":
+            messagebox.showinfo("Warning","Dataset not uploaded")
+        else:
+            self.t.config(text="File is successfully loaded")
+            self.exe.config(state='normal')
+
+    def executeML(self,ml,mat):
+        for i in range(len(ml)):
+            if ml[i]==1:
+                if i==0:
+                    indexes,name=self.sobj.cosine(mat)
+                    images=self.sobj.getImages(indexes)
+                    self.vis.plot_results(images,name)
+                    self.count+=1
+                elif i==1:
+                    indexes,name=self.sobj.euclidean(mat)
+                    images=self.sobj.getImages(indexes)
+                    self.vis.plot_results(images,name)
+                    self.count+=1
+                else:
+                    indexes,name=self.sobj.manhattan(mat)
+                    images=self.sobj.getImages(indexes)
+                    self.vis.plot_results(images,name)
+                    self.count+=1
+
+    def execute(self):
+        self.sobj=Similar(self.image_dir,self.test)
+        chosen=self.allstates()
+        ml=chosen[0]
+        tl=chosen[1]
+
+        if 1 not in ml and 1 not in tl:
+            messagebox.showinfo("Warning","Please select an algorithm")
+        elif 1 not in ml and 1 in tl:
+            messagebox.showinfo("Warning","Please select an ML algorithm")
+        else:
+            self.vis=VisualizeSim(self.test)
+            if 1 in ml:
+                matrix=self.sobj.getMatrix()        
+                self.executeML(ml,matrix)
+            if 1 in tl:    
+                for i in range(len(tl)):
+                    if tl[i]==1:
+                        if i==0:
+                            mat=self.sobj.mobnet()
+                            self.executeML(chosen[0],mat)
+                            self.count+=1
+                        elif i==1:
+                            mat=self.sobj.resnet()
+                            self.executeML(chosen[0],mat)
+                            self.count+=1
+                        elif i==2:
+                            mat=self.sobj.vgg16()
+                            self.executeML(chosen[0],mat)
+                            self.count+=1
+                        else:
+                            mat=self.sobj.vgg19()
+                            self.executeML(chosen[0],mat)
+                            self.count+=1
+            if self.count>1:
+                self.vis.plot_comparison()
+
 
 app=Container()
 app.mainloop()
