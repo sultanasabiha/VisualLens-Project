@@ -5,7 +5,7 @@ from tkinter import ttk
 matplotlib.use("TKAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
-from scikitplot.metrics import plot_confusion_matrix, plot_roc,plot_precision_recall,plot_silhouette
+from scikitplot.metrics import plot_confusion_matrix, plot_roc,plot_precision_recall,plot_silhouette,plot_calibration_curve,plot_cumulative_gain
 from scikitplot.estimators import plot_learning_curve
 from sklearn.metrics import accuracy_score,f1_score,precision_score,recall_score,multilabel_confusion_matrix,davies_bouldin_score,calinski_harabasz_score
 import numpy as np
@@ -14,6 +14,8 @@ from sklearn.calibration import calibration_curve
 from sewar import rmse,uqi,sam,vifp
 import cv2
 from collections import defaultdict
+from sklearn.metrics import pairwise_distances
+import numpy as np
 
 class VisualizeClass:
     def __init__(self,type):
@@ -27,7 +29,8 @@ class VisualizeClass:
         self.f1s=[]
         self.precisions=[]
         self.recalls=[]
-
+        self.probas=[]
+        self.y_test=0
     def plot_results(self,clf,pred,probas,name,category,x_trg,y_trg,y_test):
         tab=TabClass(self.notebook,self.type)
         tab.plot(clf,pred,probas,name,category,y_test,x_trg,y_trg)
@@ -37,10 +40,11 @@ class VisualizeClass:
         self.f1s.append(f1_score(y_test,pred,average='weighted'))
         self.precisions.append(precision_score(y_test,pred,average='weighted'))
         self.recalls.append(recall_score(y_test,pred,average='weighted'))
-
+        self.probas.append(probas)
+        self.y_test=y_test
     def plot_comparison(self):
         tab=TabClass(self.notebook,self.type)
-        tab.pieplot(self.accs,self.names,self.f1s,self.precisions,self.recalls)
+        tab.pieplot(self.accs,self.names,self.f1s,self.precisions,self.recalls,self.probas,self.y_test)
         self.notebook.add(tab,text="Comparison")
 
 class TabClass(tk.Frame):
@@ -79,7 +83,7 @@ class TabClass(tk.Frame):
         if self.type==2:
             cm = multilabel_confusion_matrix(y_test, pred)
             print(cm)
-            print(len(cm))
+            count=len(cm)
             canvas=self.setCanvas()
             rows=len(cm)//2 if (len(cm)%2==0) else (len(cm)//2)+1
             # Plot confusion matrix
@@ -88,21 +92,27 @@ class TabClass(tk.Frame):
             for i in range(rows):
                 for j in range(2):
                     ax = axes[i,j]
-                    ax.matshow(cm[c], cmap=plt.cm.Blues, alpha=0.7)
-                    for x in range(cm[c].shape[1]):
-                        for y in range(cm[c].shape[0]):
-                            ax.text(x, y, f"{cm[c][y, x]}", va='center', ha='center')
-                    ax.set_xlabel('Predicted label')
-                    ax.set_ylabel('True label')
-                    ax.set_title('Class '+str(c))
-                    ax.set_xticks([0, 1])
-                    ax.set_yticks([0, 1])
-                    ax.xaxis.set_ticks_position('bottom')
-                    c+=1
+                    if count>0:
+                        ax.matshow(cm[c], cmap=plt.cm.Blues, alpha=0.7)
+                        for x in range(cm[c].shape[1]):
+                            for y in range(cm[c].shape[0]):
+                                ax.text(x, y, f"{cm[c][y, x]}", va='center', ha='center')
+                        ax.set_xlabel('Predicted label')
+                        ax.set_ylabel('True label')
+                        ax.set_title('Class '+str(c))
+                        ax.set_xticks([0, 1])
+                        ax.set_yticks([0, 1])
+                        ax.xaxis.set_ticks_position('bottom')
+                        c+=1
+                        count-=1
+                    else:
+                        ax.set_yticks([])
+                        ax.set_xticks([])
+                        ax.set_axis_off()
+            canvas.figure.suptitle("Confusion Matrix for each Class")
 
             canvas=self.setCanvas()
             ax=canvas.figure.add_subplot(111)
-
             for i in range(len(clf.classes_)):
                 fraction_of_positives, mean_predicted_value = calibration_curve(y_test == clf.classes_[i], probas[:, i], n_bins=4)
                 ax.plot(mean_predicted_value, fraction_of_positives, marker='o',label='Class {}'.format(clf.classes_[i]))
@@ -112,25 +122,6 @@ class TabClass(tk.Frame):
             ax.set_ylabel('Fraction of positives')
             ax.set_title('Calibration Curves for the classes')
             ax.legend()
-        if self.type==1:
-            canvas=self.setCanvas()
-            ax=canvas.figure.add_subplot(111)
-            fraction_of_positives, mean_predicted_value = calibration_curve(y_test, probas[:, 1], n_bins=4)
-            ax.plot(mean_predicted_value, fraction_of_positives, marker='o', label='Class 1')
-            ax.plot([0, 1], [0, 1], linestyle='--', color='black', label='Perfectly calibrated')
-            ax.set_xlabel('Mean predicted probability')
-            ax.set_ylabel('Fraction of positives')
-            ax.set_title('Calibration Curve')
-            ax.legend()
-
-            canvas=self.setCanvas()
-            ax=canvas.figure.add_subplot(111)
-            ax.hist(mean_predicted_value,
-                    range=(0, 1),
-                    bins=20,
-                    label=name,
-                )
-            ax.set(title=name, xlabel="Mean predicted probability", ylabel="Count")
 
         canvas=self.setCanvas()
         ax2=canvas.figure.add_subplot(111)
@@ -147,7 +138,12 @@ class TabClass(tk.Frame):
         plot_precision_recall(y_test,probas,ax=ax4)
         ax4.set_title('Precision Recall curve for'+name)
         
-    def pieplot(self,accs,names,f1s,precisions,recalls):
+        if self.type==1:
+            canvas=self.setCanvas()
+            ax1=canvas.figure.add_subplot(111)      
+            plot_cumulative_gain(y_test,probas,ax=ax1)
+
+    def pieplot(self,accs,names,f1s,precisions,recalls,probas,y_test):
         count=len(accs)
      
         explode=[0]*count
@@ -198,6 +194,11 @@ class TabClass(tk.Frame):
         ax1.axis('equal')
         ax1.set_title("Recall of the Algorithms")
         ax1.legend(title='Models',loc='lower right',labels=names,bbox_to_anchor=(0.5,0.5))
+
+        if self.type==1:
+            canvas=self.setCanvas()
+            ax1=canvas.figure.add_subplot(111)      
+            plot_calibration_curve(y_test,probas,names,ax=ax1)
 
 
 
@@ -407,28 +408,79 @@ class VisualizeClus:
         self.names=[]
         self.db_index=[]
         self.ch_index=[]
+        self.coh_index=[]
+        self.sep_index=[]
+        self.dunn_index=[]
 
     def plot_results(self,images_df,name,mat,y_labels):
         self.tab=TabClus(self.notebook)
         self.tab.plot(images_df,self.n_clusters,mat,y_labels)
         self.notebook.add(self.tab,text=name)
-        db,ch=self.calculate_metrics(mat,y_labels)
-        self.db_index.append(db)
-        self.ch_index.append(ch)
+        self.calculate_metrics(mat,y_labels)
         self.names.append(name)      
 
     def calculate_metrics(self,mat,labels):
-        db_index = davies_bouldin_score(mat, labels)
-        ch_index = calinski_harabasz_score(mat, labels)
+        db = davies_bouldin_score(mat, labels)
+        ch= calinski_harabasz_score(mat, labels)
+        coh = self.cohesion(mat,labels)
+        sep = self.separation(mat,labels)
+        dunn = self.dunn(mat,labels)
 
-        return db_index,ch_index
+        self.db_index.append(db)
+        self.ch_index.append(ch)
+        self.coh_index.append(coh)
+        self.sep_index.append(sep)
+        self.dunn_index.append(dunn)
+
     
+    def cohesion(self,X, labels):
+        total_cohesion = 0
+        for cluster_label in np.unique(labels):
+            cluster_points = X[labels == cluster_label]
+            centroid = np.mean(cluster_points, axis=0)
+            total_cohesion += np.sum(np.linalg.norm(cluster_points - centroid, axis=1))
+        return total_cohesion / len(X)
+    def separation(self,X, labels):
+        centroids = []
+        for label in np.unique(labels):
+            cluster_points = X[labels == label]
+            centroid = np.mean(cluster_points, axis=0)
+            centroids.append(centroid)
+        
+        separation_sum = 0
+        total_combinations = len(centroids) * (len(centroids) - 1) / 2
+        
+        for i in range(len(centroids)):
+            for j in range(i + 1, len(centroids)):
+                separation_sum += np.linalg.norm(centroids[i] - centroids[j])
+        
+        return separation_sum / total_combinations
+
+    def dunn(self,X, labels):
+        intra_cluster_distances = []
+        for label in np.unique(labels):
+            cluster_points = X[labels == label]
+            intra_cluster_distances.append(np.max(pairwise_distances(cluster_points)))
+        
+        max_intra_cluster_distance = np.max(intra_cluster_distances)
+        
+        inter_cluster_distances = []
+        for i in range(len(np.unique(labels))):
+            for j in range(i + 1, len(np.unique(labels))):
+                centroid_i = np.mean(X[labels == i], axis=0)
+                centroid_j = np.mean(X[labels == j], axis=0)
+                inter_cluster_distances.append(np.linalg.norm(centroid_i - centroid_j))
+        
+        min_inter_cluster_distance = np.min(inter_cluster_distances)
+        
+        return min_inter_cluster_distance / max_intra_cluster_distance
+
     def plot_dendo(self,mat):
         self.tab.dendo(mat)
 
     def plot_comparison(self):
         tab=TabClus(self.notebook)
-        tab.barplot(self.db_index,self.ch_index,self.names)
+        tab.barplot(self.db_index,self.ch_index,self.coh_index,self.sep_index,self.dunn_index,self.names)
         self.notebook.add(tab,text="Comparison")
 
 
@@ -511,7 +563,7 @@ class TabClus(tk.Frame):
                             ax.set_axis_off()
             canvas.figure.suptitle("Cluster "+str(i))
 
-    def barplot(self,db_index,ch_index,names):
+    def barplot(self,db_index,ch_index,coh_index,sep_index,dunn_index,names):
         
         canvas=self.setCanvas()
         ax1=canvas.figure.add_subplot(111)
@@ -536,6 +588,7 @@ class TabClus(tk.Frame):
         canvas=self.setCanvas()
         ax1=canvas.figure.add_subplot(111)
         colors = plt.cm.viridis(np.linspace(0, 1, len(ch_index)))  # Generating a range of colors
+        ax1.set_xticks([])
 
         ax1.bar(names,ch_index,label=names,color=colors)
         highlight_index=ch_index.index(max(ch_index))
@@ -550,4 +603,57 @@ class TabClus(tk.Frame):
         ax1.legend(title='Models',loc='lower center',bbox_to_anchor=(0.5,0.5))
         ax1.set_title("Calinski-Harabasz Index")
         
+        canvas=self.setCanvas()
+        ax1=canvas.figure.add_subplot(111)
+        colors = plt.cm.viridis(np.linspace(0, 1, len(ch_index)))  # Generating a range of colors
+        ax1.set_xticks([])
+
+        ax1.bar(names,coh_index,label=names,color=colors)
+        highlight_index=coh_index.index(min(coh_index))
+        # Get the position of the highlighted rectangle
+        highlighted_rectangle = ax1.patches[highlight_index]
+        x = highlighted_rectangle.get_x() + highlighted_rectangle.get_width() / 2
+        y = highlighted_rectangle.get_height()
+
+        # Add a marker on top of the highlighted rectangle
+        ax1.scatter(x, y, color='black', marker='o', zorder=3)
+
+        ax1.legend(title='Models',loc='lower center',bbox_to_anchor=(0.5,0.5))
+        ax1.set_title("Cohesion")
+
+        canvas=self.setCanvas()
+        ax1=canvas.figure.add_subplot(111)
+        colors = plt.cm.viridis(np.linspace(0, 1, len(ch_index)))  # Generating a range of colors
+        ax1.set_xticks([])
+
+        ax1.bar(names,sep_index,label=names,color=colors)
+        highlight_index=sep_index.index(max(sep_index))
+        # Get the position of the highlighted rectangle
+        highlighted_rectangle = ax1.patches[highlight_index]
+        x = highlighted_rectangle.get_x() + highlighted_rectangle.get_width() / 2
+        y = highlighted_rectangle.get_height()
+
+        # Add a marker on top of the highlighted rectangle
+        ax1.scatter(x, y, color='black', marker='o', zorder=3)
+
+        ax1.legend(title='Models',loc='lower center',bbox_to_anchor=(0.5,0.5))
+        ax1.set_title("Separation")
+
+        canvas=self.setCanvas()
+        ax1=canvas.figure.add_subplot(111)
+        colors = plt.cm.viridis(np.linspace(0, 1, len(ch_index)))  # Generating a range of colors
+        ax1.set_xticks([])
+
+        ax1.bar(names,dunn_index,label=names,color=colors)
+        highlight_index=dunn_index.index(max(dunn_index))
+        # Get the position of the highlighted rectangle
+        highlighted_rectangle = ax1.patches[highlight_index]
+        x = highlighted_rectangle.get_x() + highlighted_rectangle.get_width() / 2
+        y = highlighted_rectangle.get_height()
+
+        # Add a marker on top of the highlighted rectangle
+        ax1.scatter(x, y, color='black', marker='o', zorder=3)
+
+        ax1.legend(title='Models',loc='lower center',bbox_to_anchor=(0.5,0.5))
+        ax1.set_title("Dunn Index")
   
