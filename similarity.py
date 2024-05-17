@@ -212,9 +212,3 @@ class Similar():
                 self.pos=i
             image_matrix5[i,:]=vgg19_net_model.predict(image).ravel()
         return image_matrix5
-'''
-sim=Similar("c:\\Users\\Sabiha\\Desktop\\Project\\DIVtrain","c:\\Users\\Sabiha\\Desktop\\Project\\DIVtrain\\0007x8.png")
-matrix=sim.getMatrix()
-ind,title=sim.cosine(matrix)
-mat=sim.getImages(ind)
-'''
