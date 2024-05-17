@@ -21,24 +21,22 @@ class checkOptions(tk.Frame):
 class Classification(tk.Frame):
     def __init__(self,parent,controller):
         tk.Frame.__init__(self,parent)
-        f=tk.Frame(self)
-        f.pack(side="top",expand=True,fill='x',pady=10)
-        tk.Label(f,text="Upload an image dataset :").pack(side="left",anchor="w",fill='x')
-        tk.Button(f,text="Browse ",command=self.openfile).pack(side="right",anchor="e",fill='x',expand=True)
-
+       
         f=tk.LabelFrame(self,text="Select classification type --",pady=10,padx=10)
         f.pack(side="top",fill="both",expand=True,anchor="w",padx=10,pady=10)
-
         types=[
             ("Binary Classification",1),
             ("Multiclass Classification",2)
         ]
+
         self.choice=tk.IntVar()
         self.choice.set(0)
         for type,value in types:
             tk.Radiobutton(f,text=type,variable=self.choice,value=value).pack(side="top",anchor="w")
-        self.btn=tk.Button(self,text="Proceed",state="disabled")#command=lambda:self.getchoice(controller)
-        self.btn.pack(side="top",fill="x",expand=True,padx=10,pady=10)
+        f=tk.Frame(self)
+        f.pack(side="top",expand=True,fill='x',pady=10)
+        tk.Label(f,text="Upload an image dataset :").pack(side="left",anchor="w",fill='x')
+        tk.Button(f,text="Browse ",command=self.openfile).pack(side="right",anchor="e",fill='x',expand=True)
 
         tk.Label(self,text="Machine Learning Algorithms :").pack(side="top",anchor="w")
         self.mloptions = checkOptions(self,["Naive Bayes Model","Decision Tree Model","Random Forest Model","Bagging Model"])
@@ -69,22 +67,19 @@ class Classification(tk.Frame):
         return res
     
     def openfile(self):
-
-        self.image_dir=filedialog.askdirectory(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select folder containing images: ")
-        self.category_file=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select file containing labels", filetypes=(("All Files", "*.*"),("Text Files",".txt"),("Word Files",".doc")))
-        self.test=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select a file for testing", filetypes=(("All Files", "*.*"),("JPG",".jpg"),("PNG",".png")))
-  
-        if self.category_file =="" or self.image_dir =="" or self.test =="":
-            messagebox.showinfo("Warning","Dataset not uploaded")
-        else:
-            self.t.config(text="File is successfully loaded")
-            self.btn.config(state='normal',command=self.change_state)
-    def change_state(self):
         if self.choice.get()==0:
             messagebox.showinfo("Warning","Please select the type of classification")
         else:
-            self.t.config(text="File is successfully loaded")
-            self.exe.config(state='normal')
+            self.image_dir=filedialog.askdirectory(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select folder containing images: ")
+            self.category_file=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select file containing labels", filetypes=(("All Files", "*.*"),("Text Files",".txt"),("Word Files",".doc")))
+            self.test=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select a file for testing", filetypes=(("All Files", "*.*"),("JPG",".jpg"),("PNG",".png")))
+    
+            if self.category_file =="" or self.image_dir =="" or self.test =="":
+                messagebox.showinfo("Warning","Dataset not uploaded")
+            else:
+                self.t.config(text="File is successfully loaded")
+                self.exe.config(state='normal')
+
     def executeML(self,ml,item):
         for i in range(len(ml)):
             if ml[i]==1:
@@ -92,6 +87,7 @@ class Classification(tk.Frame):
                     nbc,ny_pred,ny_probas,nname,ncategory,x,y,y_test=self.cobj.naive(item)
                     self.vis.plot_results(nbc,ny_pred,ny_probas,nname,ncategory,x,y,y_test)
                     self.count+=1
+                    print(nbc)
                 elif i==1:
                     dtc,dy_pred,dy_probas,dname,dcategory,x,y,y_test=self.cobj.decision(item)
                     self.vis.plot_results(dtc,dy_pred,dy_probas,dname,dcategory,x,y,y_test)
