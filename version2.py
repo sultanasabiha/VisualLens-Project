@@ -5,6 +5,7 @@ from visualize import *
 from tkinter import messagebox
 from similarity import *
 from clustering import *
+import pickle
 
 class checkOptions(tk.Frame):
     def __init__(self, parent=None, picks=[], anchor=tk.W):
@@ -17,6 +18,160 @@ class checkOptions(tk.Frame):
             self.vars.append(var)
     def state(self):
         return map((lambda var: var.get()), self.vars)
+class Similarity(tk.Frame):
+    def __init__(self,parent,controller):
+        tk.Frame.__init__(self,parent)
+        f=tk.Frame(self)
+        f.pack(side="top",fill='x',pady=10)
+        tk.Label(f,text="Upload an image dataset :").pack(side="left",anchor="w",fill='x')
+        tk.Button(f,text="Browse ",command=self.openfile).pack(side="right",anchor="e",fill='x',expand=True)
+        tk.Label(self,text="Machine Learning Algorithms :").pack(side="top",anchor="w")
+        self.mloptions = checkOptions(self, ["Cosine Similarity","Euclidean Distance","Manhattan Distance"])
+        self.mloptions.pack(side=tk.TOP,  fill='both',anchor="w",expand=True)
+        self.mloptions.config(relief=tk.GROOVE, bd=2,padx=10,pady=10)
+
+        tk.Label(self,text="Transfer Learning Algorithms :").pack(side="top",anchor="w",pady=(10,0))
+        self.tloptions = checkOptions(self, ["MobileNet Model","ResNet50","VGG16","VGG19"])
+        self.tloptions.pack(side="top",fill="both",expand=True,anchor="w")
+        self.tloptions.config(relief=tk.GROOVE, bd=2,padx=10,pady=10)
+
+
+        f=tk.Frame(self)
+        f.pack(side="top",expand=True,fill='x',pady=10)
+        tk.Button(f,text="Upload Personalized Algorithm",command=self.load_pickle).pack(side="left",anchor="w",fill='x',expand=True)
+        tk.Button(f,text=" ? ",command=self.show_info).pack(side="right",anchor="e",expand=True,fill='x')
+        self.p_frame=tk.Frame(self)
+        self.p_frame.pack(side='top',fill="x",expand=True)
+
+        tk.Button(self,text='Quit',command=self.quit).pack(side="bottom",fill='x',pady=5)
+        tk.Button(self, text='Back',command=lambda: controller.show_frame(Start)).pack(side="bottom",fill='x',pady=5)
+        self.exe=tk.Button(self, text='Execute',command=self.execute,state="disabled")
+        self.exe.pack(side="bottom",fill='x',pady=5)
+
+        self.count=0
+        self.sobj=None
+        self.vis=None
+        self.t=tk.Label(self)
+        self.t.pack(side="top",fill="x",expand=True)
+
+        self.image_dir,self.test="",""
+        self.flag=False
+        self.Name,self.Images_list=[],[]
+        self.options=[]
+    def show_info(self):
+        items = ['Name of the algorithm as Name','List containing 4 most similar images as Images_list']
+        formatted_list = '\n\n'.join(f'• {item}' for item in items)
+        messagebox.showinfo("Uploading Personalized Algorithms","Please upload the algorithm by pickling the following data with the same name and order as mentioned into a tuple:\n\n"+formatted_list)
+    def load_pickle(self):
+        self.flag=True
+        pickle_file=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select the file to be deserialized --", filetypes=(("All Files", "*.*"),("Python Files",".py"),("Pickle Files",".pkl")))
+
+        # Deserialize the tuple from the file
+        with open(pickle_file, 'rb') as f:
+            Name,Images_list= pickle.load(f)
+        self.Name.append(Name)
+        self.Images_list.append(Images_list)
+    
+        self.add_option(Name,len(self.Name))
+    def add_option(self,option_text,index):
+        # Create a frame to hold the option and its button
+        option_frame = tk.Frame(self.p_frame)
+        option_frame.pack(fill='x', pady=5)
+        
+        # Create the label for the option
+        checked_state = tk.BooleanVar()
+        checked_state.set(True)
+        c=tk.Checkbutton(option_frame, text=option_text, variable=checked_state,command=lambda:checked_state.set(True))
+        c.pack(side='left',anchor='w',pady=5)
+        
+        # Create the button to remove the option
+        remove_button = tk.Button(option_frame, text="Remove", command=lambda: self.remove_option(option_frame,index))
+        remove_button.pack(side='right', padx=5)
+
+        self.options.append((option_frame, index))
+
+    def remove_option(self,option_frame,index):
+        option_frame.destroy()
+        self.options = [opt for opt in self.options if opt[1] != index]
+        del self.Name[index-1]
+        del self.Images_list[index-1]
+
+    def allstates(self): 
+        ml=list(self.mloptions.state())
+        tl=list(self.tloptions.state())
+        res=[ml,tl]
+        return res
+    
+    def openfile(self):
+
+        self.image_dir=filedialog.askdirectory(initialdir="c:/Users/Sabiha/Desktop/Project",title="Select folder containing images: ")
+        self.test=filedialog.askopenfilename(initialdir="c:/Users/Sabiha/Desktop/Project",title="Select a file for testing", filetypes=(("All Files", "*.*"),("JPG",".jpg"),("PNG",".png")))
+  
+        if self.image_dir =="" or self.test =="":
+            messagebox.showwarning("Warning","Dataset not uploaded")
+        else:
+            self.t.config(text="File is successfully loaded")
+            self.exe.config(state='normal')
+
+    def executeML(self,ml,mat):
+        for i in range(len(ml)):
+            if ml[i]==1:
+                if i==0:
+                    indexes,name=self.sobj.cosine(mat)
+                    images=self.sobj.getImages(indexes)
+                    self.vis.plot_results(images,name)
+                    self.count+=1
+                elif i==1:
+                    indexes,name=self.sobj.euclidean(mat)
+                    images=self.sobj.getImages(indexes)
+                    self.vis.plot_results(images,name)
+                    self.count+=1
+                else:
+                    indexes,name=self.sobj.manhattan(mat)
+                    images=self.sobj.getImages(indexes)
+                    self.vis.plot_results(images,name)
+                    self.count+=1
+
+    def execute(self):
+        self.sobj=Similar(self.image_dir,self.test)
+        chosen=self.allstates()
+        ml=chosen[0]
+        tl=chosen[1]
+
+        if 1 not in ml and 1 not in tl and self.flag==False:
+            messagebox.showwarning("Warning","Please select an algorithm")
+        elif 1 not in ml and 1 in tl:
+            messagebox.showwarning("Warning","Please select an ML algorithm")
+        else:
+            self.vis=VisualizeSim(self.test)
+            if 1 in ml:
+                matrix=self.sobj.getMatrix()        
+                self.executeML(ml,matrix)
+            if 1 in tl:    
+                for i in range(len(tl)):
+                    if tl[i]==1:
+                        if i==0:
+                            mat=self.sobj.mobnet()
+                            self.executeML(chosen[0],mat)
+                            self.count+=1
+                        elif i==1:
+                            mat=self.sobj.resnet()
+                            self.executeML(chosen[0],mat)
+                            self.count+=1
+                        elif i==2:
+                            mat=self.sobj.vgg16()
+                            self.executeML(chosen[0],mat)
+                            self.count+=1
+                        else:
+                            mat=self.sobj.vgg19()
+                            self.executeML(chosen[0],mat)
+                            self.count+=1
+            if self.flag==True:
+                for i in range(len(self.Name)):
+                    self.vis.plot_results(self.Images_list[i],self.Name[i])
+                    self.count+=1
+            if self.count>1:
+                self.vis.plot_comparison()
 
 class Classification(tk.Frame):
     def __init__(self,parent,controller):
@@ -48,6 +203,13 @@ class Classification(tk.Frame):
         self.tloptions.pack(side="top",fill="x",anchor="w")
         self.tloptions.config(relief=tk.GROOVE, bd=2,padx=10,pady=10)
 
+        f=tk.Frame(self)
+        f.pack(side="top",expand=True,fill='x',pady=10)
+        tk.Button(f,text="Upload Personalized Algorithm",command=self.load_pickle).pack(side="left",anchor="w",fill='x',expand=True)
+        tk.Button(f,text=" ? ",command=self.show_info).pack(side="right",anchor="e",expand=True,fill='x')
+        self.p_frame=tk.Frame(self)
+        self.p_frame.pack(side='top',fill="x",expand=True)
+
         tk.Button(self,text='Quit',command=self.quit).pack(side="bottom",fill='x',pady=5) 
         tk.Button(self, text='Back',command=lambda: controller.show_frame(Start)).pack(side="bottom",fill='x',pady=5)
         self.exe=tk.Button(self, text='Execute',command=self.execute,state="disabled")
@@ -57,8 +219,60 @@ class Classification(tk.Frame):
         self.vis=None
         self.t=tk.Label(self)
         self.t.pack(side="top",fill="x",expand=True)
-
+        self.flag=False
         self.category_file,self.image_dir,self.test="","",""
+        self.Name,self.Classifier, self.x_train,self.y_train,self.y_test,self.y_pred,self.y_probas,self.category_timg=[],[],[],[],[],[],[],[]
+        self.options=[]
+    def show_info(self):
+        items = ['Name of the algorithm as Name','Classifier','y_pred', 'y_probas','x_train', 'y_train', 'y_test','Category of test image as category_timg']
+        formatted_list = '\n\n'.join(f'• {item}' for item in items)
+        messagebox.showinfo("Uploading Personalized Algorithms","Please upload the algorithm by pickling the following data with the same name and order as mentioned into a tuple:\n\n"+formatted_list)
+    def load_pickle(self):
+        self.flag=True
+        pickle_file=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select the file to be deserialized --", filetypes=(("All Files", "*.*"),("Python Files",".py"),("Pickle Files",".pkl")))
+
+        # Deserialize the tuple from the file
+        with open(pickle_file, 'rb') as f:
+            Name,Classifier,y_pred,y_probas,x_train,y_train,y_test,category_timg= pickle.load(f)
+        self.Name.append(Name)
+        self.Classifier.append(Classifier)
+        self.x_train.append(x_train)
+        self.y_train.append(y_train)
+        self.y_test.append(y_test)
+        self.y_pred.append(y_pred)
+        self.y_probas.append(y_probas)
+        self.category_timg.append(category_timg)
+
+        self.add_option(Name,len(self.Name))
+    def add_option(self,option_text,index):
+        # Create a frame to hold the option and its button
+        option_frame = tk.Frame(self.p_frame)
+        option_frame.pack(fill='x', pady=5)
+        
+        # Create the label for the option
+        checked_state = tk.BooleanVar()
+        checked_state.set(True)
+        c=tk.Checkbutton(option_frame, text=option_text, variable=checked_state,command=lambda:checked_state.set(True))
+        c.pack(side='left',anchor='w',pady=5)
+        
+        # Create the button to remove the option
+        remove_button = tk.Button(option_frame, text="Remove", command=lambda: self.remove_option(option_frame,index))
+        remove_button.pack(side='right', padx=5)
+
+        self.options.append((option_frame, index))
+
+    def remove_option(self,option_frame,index):
+        option_frame.destroy()
+        self.options = [opt for opt in self.options if opt[1] != index]
+        del self.Name[index-1]
+        del self.Classifier[index-1]
+        del self.x_train[index-1]
+        del self.y_pred[index-1]
+        del self.y_train[index-1]
+        del self.y_probas[index-1]
+        del self.y_test[index-1]
+        del self.category_timg[index-1]
+
 
     def allstates(self): 
         ml=list(self.mloptions.state())
@@ -68,14 +282,14 @@ class Classification(tk.Frame):
     
     def openfile(self):
         if self.choice.get()==0:
-            messagebox.showinfo("Warning","Please select the type of classification")
+            messagebox.showwarning("Warning","Please select the type of classification")
         else:
             self.image_dir=filedialog.askdirectory(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select folder containing images: ")
             self.category_file=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select file containing labels", filetypes=(("All Files", "*.*"),("Text Files",".txt"),("Word Files",".doc")))
             self.test=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select a file for testing", filetypes=(("All Files", "*.*"),("JPG",".jpg"),("PNG",".png")))
     
             if self.category_file =="" or self.image_dir =="" or self.test =="":
-                messagebox.showinfo("Warning","Dataset not uploaded")
+                messagebox.showwarning("Warning","Dataset not uploaded")
             else:
                 self.t.config(text="File is successfully loaded")
                 self.exe.config(state='normal')
@@ -106,10 +320,10 @@ class Classification(tk.Frame):
         ml=chosen[0]
         tl=chosen[1]
 
-        if 1 not in ml and 1 not in tl:
-            messagebox.showinfo("Warning","Please select an algorithm")
+        if 1 not in ml and 1 not in tl and self.flag==False:
+            messagebox.showwarning("Warning","Please select an algorithm")
         elif 1 not in ml and 1 in tl:
-            messagebox.showinfo("Warning","Please select an ML algorithm")
+            messagebox.showwarning("Warning","Please select an ML algorithm")
         else:
             self.vis=VisualizeClass(self.choice.get())
             if 1 in ml:
@@ -134,6 +348,11 @@ class Classification(tk.Frame):
                             item=self.cobj.vgg19()
                             self.executeML(chosen[0],item)
                             self.count+=1
+            if self.flag==True:
+                for i in range(len(self.Name)):
+                    self.vis.plot_results(self.Classifier[i],self.y_pred[i],self.y_probas[i],self.Name[i],self.category_timg[i],self.x_train[i],self.y_train[i],self.y_test[i])
+                    self.count+=1
+
             if self.count>1:
                 self.vis.plot_comparison()
 
@@ -161,6 +380,13 @@ class Clustering(tk.Frame):
         self.tloptions.pack(side="top",anchor="w",expand=True,fill='both')
         self.tloptions.config(relief=tk.GROOVE, bd=2,padx=10,pady=10)
 
+        f=tk.Frame(self)
+        f.pack(side="top",expand=True,fill='x',pady=10)
+        tk.Button(f,text="Upload Personalized Algorithm",command=self.load_pickle).pack(side="left",anchor="w",fill='x',expand=True)
+        tk.Button(f,text=" ? ",command=self.show_info).pack(side="right",anchor="e",expand=True,fill='x')
+        self.p_frame=tk.Frame(self)
+        self.p_frame.pack(side='top',fill="x",expand=True)
+
         tk.Button(self,text='Quit',command=self.quit).pack(side="bottom",fill='x',pady=5) 
         tk.Button(self, text='Back',command=lambda: controller.show_frame(Start)).pack(side="bottom",pady=5,fill='x')
         self.exe=tk.Button(self, text='Execute',command=self.execute,state="disabled")
@@ -172,6 +398,50 @@ class Clustering(tk.Frame):
         self.t.pack(side="top",fill="x",expand=True)
 
         self.image_dir=""
+        self.flag=False
+        self.Name,self.results_df,self.Images_matrix,self.y_result=[],[],[],[]
+        self.options=[]
+
+    def show_info(self):
+        items = ['Name of the algorithm as Name','Results of clustering containing a Path column(path to the image) and a Predicted column(predicted class of that image)','Matrix containing all the loaded images as Image_matrix','y_result']
+        formatted_list = '\n\n'.join(f'• {item}' for item in items)
+        messagebox.showinfo("Uploading Personalized Algorithms","Please upload the algorithm by pickling the following data with the same name and order as mentioned into a tuple:\n\n"+formatted_list)
+    def load_pickle(self):
+        self.flag=True
+        pickle_file=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select the file to be deserialized --", filetypes=(("All Files", "*.*"),("Python Files",".py"),("Pickle Files",".pkl")))
+
+        # Deserialize the tuple from the file
+        with open(pickle_file, 'rb') as f:
+            Name,results_df,Images_matrix,y_result= pickle.load(f)
+        self.Name.append(Name)
+        self.results_df.append(results_df)
+        self.Images_matrix.append(Images_matrix)
+        self.y_result.append(y_result)
+
+        self.add_option(Name,len(self.Name))
+    def add_option(self,option_text,index):
+        # Create a frame to hold the option and its button
+        option_frame = tk.Frame(self.p_frame)
+        option_frame.pack(fill='x', pady=5)
+        
+        # Create the label for the option
+        checked_state = tk.BooleanVar()
+        checked_state.set(True)
+        c=tk.Checkbutton(option_frame, text=option_text, variable=checked_state,command=lambda:checked_state.set(True))
+        c.pack(side='left',anchor='w',pady=5)
+        
+        # Create the button to remove the option
+        remove_button = tk.Button(option_frame, text="Remove", command=lambda: self.remove_option(option_frame,index))
+        remove_button.pack(side='right', padx=5)
+
+        self.options.append((option_frame, index))
+
+    def remove_option(self,option_frame,index):
+        option_frame.destroy()
+        self.options = [opt for opt in self.options if opt[1] != index]
+        del self.Name[index-1]
+        del self.results_df[index-1]
+        del self.y_result[index-1]
 
     def allstates(self): 
         ml=list(self.mloptions.state())
@@ -181,12 +451,12 @@ class Clustering(tk.Frame):
     
     def openfile(self):
         if self.text.get()=='':
-            messagebox.showinfo("Warning","Please enter no. of clusters")
+            messagebox.showwarning("Warning","Please enter no. of clusters")
         else:
             self.n_clusters=int(self.text.get())  
             self.image_dir=filedialog.askdirectory(initialdir="c:/Users/Sabiha/Desktop/Project",title="Select folder containing images: ")
             if self.image_dir =="":
-                messagebox.showinfo("Warning","Dataset not uploaded")
+                messagebox.showwarning("Warning","Dataset not uploaded")
             else:
                 self.t.config(text="File is successfully loaded")
                 self.exe.config(state='normal')
@@ -214,10 +484,10 @@ class Clustering(tk.Frame):
         ml=chosen[0]
         tl=chosen[1]
 
-        if 1 not in ml and 1 not in tl:
-            messagebox.showinfo("Warning","Please select an algorithm")
+        if 1 not in ml and 1 not in tl and self.flag==False:
+            messagebox.showwarning("Warning","Please select an algorithm")
         elif 1 not in ml and 1 in tl:
-            messagebox.showinfo("Warning","Please select an ML algorithm")
+            messagebox.showwarning("Warning","Please select an ML algorithm")
         else:
             self.vis=VisualizeClus(self.n_clusters)
             if 1 in ml:
@@ -242,6 +512,11 @@ class Clustering(tk.Frame):
                             mat=self.cobj.vgg19()
                             self.executeML(chosen[0],mat)
                             self.count+=1
+            if self.flag==True:
+                for i in range(len(self.Name)):
+                    self.vis.plot_results(self.results_df[i],self.Name[i],self.Images_matrix[i],self.y_result[i])
+                    self.count+=1
+
             if self.count>1:
                 self.vis.plot_comparison()
   
@@ -284,7 +559,7 @@ class Start(tk.Frame):
 
     def getchoice(self,controller):
         if self.choice.get()==0:
-            messagebox.showinfo("Warning","Please select a task")
+            messagebox.showwarning("Warning","Please select a task")
         elif(self.choice.get()==1):
             go=Similarity
         elif(self.choice.get()==2):
@@ -294,111 +569,10 @@ class Start(tk.Frame):
         controller.show_frame(go)
   
 
-class Similarity(tk.Frame):
-    def __init__(self,parent,controller):
-        tk.Frame.__init__(self,parent)
-        f=tk.Frame(self)
-        f.pack(side="top",fill='x',pady=10)
-        tk.Label(f,text="Upload an image dataset :").pack(side="left",anchor="w",fill='x')
-        tk.Button(f,text="Browse ",command=self.openfile).pack(side="right",anchor="e",fill='x',expand=True)
-        tk.Label(self,text="Machine Learning Algorithms :").pack(side="top",anchor="w")
-        self.mloptions = checkOptions(self, ["Cosine Similarity","Euclidean Distance","Manhattan Distance"])
-        self.mloptions.pack(side=tk.TOP,  fill='both',anchor="w",expand=True)
-        self.mloptions.config(relief=tk.GROOVE, bd=2,padx=10,pady=10)
-
-        tk.Label(self,text="Transfer Learning Algorithms :").pack(side="top",anchor="w",pady=(10,0))
-        self.tloptions = checkOptions(self, ["MobileNet Model","ResNet50","VGG16","VGG19"])
-        self.tloptions.pack(side="top",fill="both",expand=True,anchor="w")
-        self.tloptions.config(relief=tk.GROOVE, bd=2,padx=10,pady=10)
-
-        tk.Button(self,text='Quit',command=self.quit).pack(side="bottom",fill='x',pady=5)
-        tk.Button(self, text='Back',command=lambda: controller.show_frame(Start)).pack(side="bottom",fill='x',pady=5)
-        self.exe=tk.Button(self, text='Execute',command=self.execute,state="disabled")
-        self.exe.pack(side="bottom",fill='x',pady=5)
-
-        self.count=0
-        self.sobj=None
-        self.vis=None
-        self.t=tk.Label(self)
-        self.t.pack(side="top",fill="x",expand=True)
-
-        self.image_dir,self.test="",""
-
-    def allstates(self): 
-        ml=list(self.mloptions.state())
-        tl=list(self.tloptions.state())
-        res=[ml,tl]
-        return res
-    
-    def openfile(self):
-
-        self.image_dir=filedialog.askdirectory(initialdir="c:/Users/Sabiha/Desktop/Project",title="Select folder containing images: ")
-        self.test=filedialog.askopenfilename(initialdir="c:/Users/Sabiha/Desktop/Project",title="Select a file for testing", filetypes=(("All Files", "*.*"),("JPG",".jpg"),("PNG",".png")))
-  
-        if self.image_dir =="" or self.test =="":
-            messagebox.showinfo("Warning","Dataset not uploaded")
-        else:
-            self.t.config(text="File is successfully loaded")
-            self.exe.config(state='normal')
-
-    def executeML(self,ml,mat):
-        for i in range(len(ml)):
-            if ml[i]==1:
-                if i==0:
-                    indexes,name=self.sobj.cosine(mat)
-                    images=self.sobj.getImages(indexes)
-                    self.vis.plot_results(images,name)
-                    self.count+=1
-                elif i==1:
-                    indexes,name=self.sobj.euclidean(mat)
-                    images=self.sobj.getImages(indexes)
-                    self.vis.plot_results(images,name)
-                    self.count+=1
-                else:
-                    indexes,name=self.sobj.manhattan(mat)
-                    images=self.sobj.getImages(indexes)
-                    self.vis.plot_results(images,name)
-                    self.count+=1
-
-    def execute(self):
-        self.sobj=Similar(self.image_dir,self.test)
-        chosen=self.allstates()
-        ml=chosen[0]
-        tl=chosen[1]
-
-        if 1 not in ml and 1 not in tl:
-            messagebox.showinfo("Warning","Please select an algorithm")
-        elif 1 not in ml and 1 in tl:
-            messagebox.showinfo("Warning","Please select an ML algorithm")
-        else:
-            self.vis=VisualizeSim(self.test)
-            if 1 in ml:
-                matrix=self.sobj.getMatrix()        
-                self.executeML(ml,matrix)
-            if 1 in tl:    
-                for i in range(len(tl)):
-                    if tl[i]==1:
-                        if i==0:
-                            mat=self.sobj.mobnet()
-                            self.executeML(chosen[0],mat)
-                            self.count+=1
-                        elif i==1:
-                            mat=self.sobj.resnet()
-                            self.executeML(chosen[0],mat)
-                            self.count+=1
-                        elif i==2:
-                            mat=self.sobj.vgg16()
-                            self.executeML(chosen[0],mat)
-                            self.count+=1
-                        else:
-                            mat=self.sobj.vgg19()
-                            self.executeML(chosen[0],mat)
-                            self.count+=1
-            if self.count>1:
-                self.vis.plot_comparison()
-
-
 app=Container()
+app.title("Visual-Lens")
+app.iconbitmap('C:\\Users\\Sabiha\\Desktop\\Project\\visual_lens.ico')
+
 app.mainloop()
 
 
