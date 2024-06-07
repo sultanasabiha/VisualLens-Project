@@ -29,7 +29,6 @@ class Similar():
 
     def getMatrix(self):
         self.loadimages()
-        print(self.test)
         image_matrix1=np.zeros(([len(self.images_dict),150528]))
         for i, (num,image) in enumerate (self.images_dict.items()):
             if num == self.test:
@@ -54,7 +53,6 @@ class Similar():
 
         #Displaying the index of 4 similar images
         sim_img_index=np.argsort(-product_info)[1:5]
-        print(sim_img_index)
 
         return sim_img_index, title
         
@@ -74,7 +72,6 @@ class Similar():
 
         #Displaying the index of 4 similar images
         sim_img_index=np.argsort(product_info)[1:5]
-        print(sim_img_index)
 
         return sim_img_index,title
 
@@ -82,7 +79,6 @@ class Similar():
         #Displaying images
         images_list=[]
         for i, (path,image) in enumerate(self.images_dict.items()):
-            print(i,img_index)
             if i in list(img_index):
                 images_list.append(cv2.cvtColor(cv2.resize(cv2.imread(path),(224,224)),cv2.COLOR_BGR2RGB))
         return images_list
@@ -103,7 +99,6 @@ class Similar():
 
         #Displaying the index of 4 similar images
         sim_img_index=np.argsort(product_info)[1:5]
-        print(sim_img_index)
         return sim_img_index,title
 
     def mobnet(self):
