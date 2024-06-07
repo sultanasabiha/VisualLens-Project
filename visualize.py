@@ -11,17 +11,21 @@ from sklearn.metrics import accuracy_score,f1_score,precision_score,recall_score
 import numpy as np
 from matplotlib.figure import Figure
 from sklearn.calibration import calibration_curve
-from sewar import rmse,uqi,sam,vifp
+from skimage.metrics import structural_similarity as ssim
+
 import cv2
 from collections import defaultdict
 from sklearn.metrics import pairwise_distances
-import numpy as np
+import sys,os
 
 class VisualizeClass:
     def __init__(self,type):
         self.top=tk.Toplevel()
+        iconPath = self.resource_path('visual_lens.ico')
+        self.top.iconbitmap(iconPath)
+        self.top.iconify()
         self.notebook=ttk.Notebook(self.top)
-        self.top.geometry('672x576')
+        self.top.geometry('672x672')
         self.notebook.pack(expand=True,fill='both')
         self.type=type
         self.names=[]
@@ -31,9 +35,17 @@ class VisualizeClass:
         self.recalls=[]
         self.probas=[]
         self.y_test=0
+    def resource_path(delf,relative_path):
+        """ Get absolute path to resource, works for dev and for PyInstaller """
+        try:
+            # PyInstaller creates a temp folder and stores path in _MEIPASS
+            base_path = sys._MEIPASS
+        except Exception:
+            base_path = os.path.abspath(".")
+        return os.path.join(base_path, relative_path)
     def plot_results(self,clf,pred,probas,name,category,x_trg,y_trg,y_test):
         tab=TabClass(self.notebook,self.type)
-        tab.plot(clf,pred,probas,name,category,y_test,x_trg,y_trg)
+        tab.plot(clf,pred,probas,name,category,x_trg,y_trg,y_test)
         self.notebook.add(tab,text=name)
         self.accs.append(accuracy_score(y_test,pred))
         self.names.append(name)
@@ -46,6 +58,7 @@ class VisualizeClass:
         tab=TabClass(self.notebook,self.type)
         tab.pieplot(self.accs,self.names,self.f1s,self.precisions,self.recalls,self.probas,self.y_test)
         self.notebook.add(tab,text="Comparison")
+        self.top.deiconify()
 
 class TabClass(tk.Frame):
     def __init__(self, parent,type):
@@ -69,9 +82,11 @@ class TabClass(tk.Frame):
         canvas_widget = canvas.get_tk_widget()
         canvas_widget.pack(side=tk.TOP, fill=tk.BOTH,padx=10,pady=10,ipadx=10,ipady=10)
         canvas.draw()
+        toolbar=NavigationToolbar2Tk(canvas,self.innercanvas,pack_toolbar=False)
+        toolbar.pack(anchor='w',fill='x')
         return canvas
     
-    def plot(self,clf,pred,probas,name,category,y_test,x_trg,y_trg):
+    def plot(self,clf,pred,probas,name,category,x_trg,y_trg,y_test):
 
         tk.Label(self,text="Category of test image:"+category).pack(side=tk.TOP, fill=tk.BOTH,padx=10,pady=10,ipadx=10,ipady=10)
 
@@ -82,7 +97,6 @@ class TabClass(tk.Frame):
 
         if self.type==2:
             cm = multilabel_confusion_matrix(y_test, pred)
-            print(cm)
             count=len(cm)
             canvas=self.setCanvas()
             rows=len(cm)//2 if (len(cm)%2==0) else (len(cm)//2)+1
@@ -200,45 +214,96 @@ class TabClass(tk.Frame):
             ax1=canvas.figure.add_subplot(111)      
             plot_calibration_curve(y_test,probas,names,ax=ax1)
 
-
-
 class VisualizeSim:
     def __init__(self,test):
         self.top=tk.Toplevel()
+        iconPath = self.resource_path('visual_lens.ico')
+        self.top.iconbitmap(iconPath)
+        self.top.iconify()
         self.notebook=ttk.Notebook(self.top)
-        self.top.geometry('672x576')
+        self.top.geometry('672x672')
         self.notebook.pack(expand=True,fill='both')
         self.org=cv2.cvtColor(cv2.resize(cv2.imread(test),(224,224)),cv2.COLOR_BGR2RGB)
-        self.rmse_images=defaultdict(list)
-        self.uqi_images=defaultdict(list)
-        self.sam_images=defaultdict(list)
-        self.vifp_images=defaultdict(list)
+ 
+        self.ssim_images=defaultdict(list)
+        self.orb_images=defaultdict(list)
+        self.corr_images=defaultdict(list)
+        self.bhatta_images=defaultdict(list)
+        self.intersect_images=defaultdict(list)
 
+    def resource_path(delf,relative_path):
+        """ Get absolute path to resource, works for dev and for PyInstaller """
+        try:
+            # PyInstaller creates a temp folder and stores path in _MEIPASS
+            base_path = sys._MEIPASS
+        except Exception:
+            base_path = os.path.abspath(".")
+        return os.path.join(base_path, relative_path)
     def plot_results(self,images_list,name):
         tab=TabSim(self.notebook)
         tab.plot(images_list,self.org)
         self.notebook.add(tab,text=name)
 
         for i in range(len(images_list)):
-            rmse,uqi,sam,vifp=self.calculate_metrics(self.org,images_list[i])
-            self.rmse_images[name].append(rmse)
-            self.uqi_images[name].append(uqi)
-            self.sam_images[name].append(sam)
-            self.vifp_images[name].append(vifp)
-            
+            ssim,num_matches,corr,bhatta,intersect=self.calculate_metrics(self.org,images_list[i])
+
+            self.ssim_images[name].append(ssim)
+            self.orb_images[name].append(num_matches)
+            self.corr_images[name].append(corr)
+            self.bhatta_images[name].append(bhatta)
+            self.intersect_images[name].append(intersect)
+
     def calculate_metrics(self,img1, img2):
-        rmse_scores=rmse(img1, img2)
-        uiq_scores=uqi(img1, img2)
-        sam_scores=sam(img1, img2)
-        vifp_scores=vifp(img1, img2)
 
-        return rmse_scores,uiq_scores,sam_scores,vifp_scores
+        win_size = min(img1.shape[0], img1.shape[1], img2.shape[0], img2.shape[1])
+        if win_size % 2 == 0:
+            win_size -= 1
+        (score, diff) = ssim(img1, img2, full=True,win_size=win_size,channel_axis=2)
+        num_matches=self.calculate_orb(img1,img2)
+        corr,bhatta,intersect=self.histogram_comparison(img1,img2)
 
+
+        return score,num_matches,corr,bhatta,intersect
+    def calculate_orb(self,image1, image2):
+        # Initialize ORB detector
+        orb = cv2.ORB_create()
+
+        # Find key points and descriptors
+        kp1, des1 = orb.detectAndCompute(image1, None)
+        kp2, des2 = orb.detectAndCompute(image2, None)
+
+        # Match descriptors
+        bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+        matches = bf.match(des1, des2)
+        matches = sorted(matches, key=lambda x: x.distance)
+
+        return len(matches)
+
+    def histogram_comparison(self,image1, image2):
+
+        # Convert images to HSV color space
+        hsvA = cv2.cvtColor(image1, cv2.COLOR_BGR2HSV)
+        hsvB = cv2.cvtColor(image2, cv2.COLOR_BGR2HSV)
+
+        # Compute the histogram for each image
+        histA = cv2.calcHist([hsvA], [0, 1], None, [50, 60], [0, 180, 0, 256])
+        histB = cv2.calcHist([hsvB], [0, 1], None, [50, 60], [0, 180, 0, 256])
+
+        # Normalize the histograms
+        cv2.normalize(histA, histA, 0, 1, cv2.NORM_MINMAX)
+        cv2.normalize(histB, histB, 0, 1, cv2.NORM_MINMAX)
+
+        # Compare histograms using the correlation method
+        correlation = cv2.compareHist(histA, histB, cv2.HISTCMP_CORREL)
+        bhatta=cv2.compareHist(histA,histB,cv2.HISTCMP_BHATTACHARYYA)
+        intersect=cv2.compareHist(histA,histB,cv2.HISTCMP_INTERSECT)
+        return correlation,bhatta,intersect
 
     def plot_comparison(self):
         tab=TabSim(self.notebook)
-        tab.barplot(self.rmse_images,self.uqi_images,self.sam_images,self.vifp_images)
+        tab.barplot(self.ssim_images,self.orb_images,self.corr_images,self.bhatta_images,self.intersect_images)
         self.notebook.add(tab,text="Comparison")
+        self.top.deiconify()
 
 class TabSim(tk.Frame):
     def __init__(self, parent):
@@ -261,6 +326,8 @@ class TabSim(tk.Frame):
         canvas_widget = canvas.get_tk_widget()
         canvas_widget.pack(side=tk.TOP, fill=tk.BOTH,padx=10,pady=10,ipadx=10,ipady=10)
         canvas.draw()
+        toolbar=NavigationToolbar2Tk(canvas,self.innercanvas,pack_toolbar=False)
+        toolbar.pack(anchor='w',fill='x')
         return canvas
     
     def plot(self,images,org):
@@ -284,105 +351,21 @@ class TabSim(tk.Frame):
                 ax.set_xticks([])
         canvas.figure.suptitle("Predicted Similar Images")
 
-    def barplot(self,rmse_images,uqi_images,sam_images,vifp_images):
+    def barplot(self,ssim_images,orb_images,corr_images,bhatta_images,intersect_images):
         
         canvas=self.setCanvas()
         axes = canvas.figure.subplots(nrows=2, ncols=2)
         canvas.figure.subplots_adjust(hspace=0.3)
-        colors = plt.cm.viridis(np.linspace(0, 1, len(rmse_images)))  # Generating a range of colors
+        colors = plt.cm.viridis(np.linspace(0, 1, len(ssim_images)))  # Generating a range of colors
 
         c=0
         for i in range(2):
             for j in range(2):
                 ax = axes[i,j]
                 img=[]
-                for k in rmse_images.keys():
-                    img.append(rmse_images[k][c])
-                ax.bar(rmse_images.keys(),img,label=rmse_images.keys(),color=colors)
-                ax.set_xticks([])
-                ax.set_title('Image '+str(c+1))
-                highlight_index=img.index(min(img))
-                # Get the position of the highlighted rectangle
-                highlighted_rectangle = ax.patches[highlight_index]
-                x = highlighted_rectangle.get_x() + highlighted_rectangle.get_width() / 2
-                y = highlighted_rectangle.get_height()
-
-                # Add a marker on top of the highlighted rectangle
-                ax.scatter(x, y, color='black', marker='o', zorder=3)
-
-                c+=1
-        axes[1,1].legend(title='Models',loc='lower center',bbox_to_anchor=(0.5,0.5))
-        canvas.figure.suptitle("Root Mean Square Error (RMSE) Values")
-        
-        
-        canvas=self.setCanvas()
-        axes = canvas.figure.subplots(nrows=2, ncols=2)
-        canvas.figure.subplots_adjust(hspace=0.3)
-        colors = plt.cm.viridis(np.linspace(0, 1, len(rmse_images)))  # Generating a range of colors
-
-        c=0
-        for i in range(2):
-            for j in range(2):
-                ax = axes[i,j]
-                img=[]
-                for k in uqi_images.keys():
-                    img.append(uqi_images[k][c])
-                ax.bar(uqi_images.keys(),img,label=uqi_images.keys(),color=colors)
-                highlight_index=img.index(max(img))
-                # Get the position of the highlighted rectangle
-                highlighted_rectangle = ax.patches[highlight_index]
-                x = highlighted_rectangle.get_x() + highlighted_rectangle.get_width() / 2
-                y = highlighted_rectangle.get_height()
-
-                # Add a marker on top of the highlighted rectangle
-                ax.scatter(x, y, color='black', marker='o', zorder=3)
-                ax.set_xticks([])
-                ax.set_title('Image '+str(c+1))
-                c+=1
-        axes[1,1].legend(title='Models',loc='lower center',bbox_to_anchor=(0.5,0.5))
-        canvas.figure.suptitle("Universal Quality Image Index (UQI) Values")
-        
-        canvas=self.setCanvas()
-        axes = canvas.figure.subplots(nrows=2, ncols=2)
-        canvas.figure.subplots_adjust(hspace=0.3)
-        colors = plt.cm.viridis(np.linspace(0, 1, len(rmse_images)))  # Generating a range of colors
-
-        c=0
-        for i in range(2):
-            for j in range(2):
-                ax = axes[i,j]
-                img=[]
-                for k in sam_images.keys():
-                    img.append(uqi_images[k][c])
-                ax.bar(sam_images.keys(),img,label=sam_images.keys(),color=colors)
-                highlight_index=img.index(min(img))
-                # Get the position of the highlighted rectangle
-                highlighted_rectangle = ax.patches[highlight_index]
-                x = highlighted_rectangle.get_x() + highlighted_rectangle.get_width() / 2
-                y = highlighted_rectangle.get_height()
-
-                # Add a marker on top of the highlighted rectangle
-                ax.scatter(x, y, color='black', marker='o', zorder=3)
-
-                ax.set_xticks([])
-                ax.set_title('Image '+str(c+1))
-                c+=1
-        axes[1,1].legend(title='Models',loc='lower center',bbox_to_anchor=(0.5,0.5))
-        canvas.figure.suptitle("Spectral Angle Mapper (SAM) Values")
-
-        canvas=self.setCanvas()
-        axes = canvas.figure.subplots(nrows=2, ncols=2)
-        canvas.figure.subplots_adjust(hspace=0.3)
-        colors = plt.cm.viridis(np.linspace(0, 1, len(rmse_images)))  # Generating a range of colors
-
-        c=0
-        for i in range(2):
-            for j in range(2):
-                ax = axes[i,j]
-                img=[]
-                for k in uqi_images.keys():
-                    img.append(vifp_images[k][c])
-                ax.bar(vifp_images.keys(),img,label=vifp_images.keys(),color=colors)
+                for k in ssim_images.keys():
+                    img.append(ssim_images[k][c])
+                ax.bar(ssim_images.keys(),img,label=ssim_images.keys(),color=colors)
                 highlight_index=img.index(max(img))
                 # Get the position of the highlighted rectangle
                 highlighted_rectangle = ax.patches[highlight_index]
@@ -396,13 +379,128 @@ class TabSim(tk.Frame):
                 ax.set_title('Image '+str(c+1))
                 c+=1
         axes[1,1].legend(title='Models',loc='lower center',bbox_to_anchor=(0.5,0.5))
-        canvas.figure.suptitle("Visual Information Fidelity (VIF) Values")
-        
+        canvas.figure.suptitle("Structural Similarity Index (SSIM)")
+
+        canvas=self.setCanvas()
+        axes = canvas.figure.subplots(nrows=2, ncols=2)
+        canvas.figure.subplots_adjust(hspace=0.3)
+        colors = plt.cm.viridis(np.linspace(0, 1, len(orb_images)))  # Generating a range of colors
+
+        c=0
+        for i in range(2):
+            for j in range(2):
+                ax = axes[i,j]
+                img=[]
+                for k in orb_images.keys():
+                    img.append(orb_images[k][c])
+                ax.bar(orb_images.keys(),img,label=orb_images.keys(),color=colors)
+                highlight_index=img.index(max(img))
+                # Get the position of the highlighted rectangle
+                highlighted_rectangle = ax.patches[highlight_index]
+                x = highlighted_rectangle.get_x() + highlighted_rectangle.get_width() / 2
+                y = highlighted_rectangle.get_height()
+
+                # Add a marker on top of the highlighted rectangle
+                ax.scatter(x, y, color='black', marker='o', zorder=3)
+
+                ax.set_xticks([])
+                ax.set_title('Image '+str(c+1))
+                c+=1
+        plt.gca().spines['bottom'].set_color('black')
+        axes[1,1].legend(title='Models',loc='lower center',bbox_to_anchor=(0.5,0.5))
+        canvas.figure.suptitle("Feature Based Similarity")
+
+        canvas=self.setCanvas()
+        axes = canvas.figure.subplots(nrows=2, ncols=2)
+        canvas.figure.subplots_adjust(hspace=0.3)
+        colors = plt.cm.viridis(np.linspace(0, 1, len(corr_images)))  # Generating a range of colors
+
+        c=0
+        for i in range(2):
+            for j in range(2):
+                ax = axes[i,j]
+                img=[]
+                for k in corr_images.keys():
+                    img.append(corr_images[k][c])
+                ax.bar(corr_images.keys(),img,label=corr_images.keys(),color=colors)
+                highlight_index=img.index(max(img))
+                # Get the position of the highlighted rectangle
+                highlighted_rectangle = ax.patches[highlight_index]
+                x = highlighted_rectangle.get_x() + highlighted_rectangle.get_width() / 2
+                y = highlighted_rectangle.get_height()
+
+                # Add a marker on top of the highlighted rectangle
+                ax.scatter(x, y, color='black', marker='o', zorder=3)
+
+                ax.set_xticks([])
+                ax.set_title('Image '+str(c+1))
+                c+=1
+        axes[1,1].legend(title='Models',loc='lower center',bbox_to_anchor=(0.5,0.5))
+        canvas.figure.suptitle("Histogram-Coorelation Comparison")
+        canvas=self.setCanvas()
+        axes = canvas.figure.subplots(nrows=2, ncols=2)
+        canvas.figure.subplots_adjust(hspace=0.3)
+        colors = plt.cm.viridis(np.linspace(0, 1, len(bhatta_images)))  # Generating a range of colors
+
+        c=0
+        for i in range(2):
+            for j in range(2):
+                ax = axes[i,j]
+                img=[]
+                for k in bhatta_images.keys():
+                    img.append(bhatta_images[k][c])
+                ax.bar(bhatta_images.keys(),img,label=bhatta_images.keys(),color=colors)
+                highlight_index=img.index(min(img))
+                # Get the position of the highlighted rectangle
+                highlighted_rectangle = ax.patches[highlight_index]
+                x = highlighted_rectangle.get_x() + highlighted_rectangle.get_width() / 2
+                y = highlighted_rectangle.get_height()
+
+                # Add a marker on top of the highlighted rectangle
+                ax.scatter(x, y, color='black', marker='o', zorder=3)
+
+                ax.set_xticks([])
+                ax.set_title('Image '+str(c+1))
+                c+=1
+        axes[1,1].legend(title='Models',loc='lower center',bbox_to_anchor=(0.5,0.5))
+        canvas.figure.suptitle("Histogram Based Comparison on Bhattacharya Distance")
+
+        canvas=self.setCanvas()
+        axes = canvas.figure.subplots(nrows=2, ncols=2)
+        canvas.figure.subplots_adjust(hspace=0.3)
+        colors = plt.cm.viridis(np.linspace(0, 1, len(intersect_images)))  # Generating a range of colors
+
+        c=0
+        for i in range(2):
+            for j in range(2):
+                ax = axes[i,j]
+                img=[]
+                for k in intersect_images.keys():
+                    img.append(intersect_images[k][c])
+                ax.bar(intersect_images.keys(),img,label=intersect_images.keys(),color=colors)
+                highlight_index=img.index(max(img))
+                # Get the position of the highlighted rectangle
+                highlighted_rectangle = ax.patches[highlight_index]
+                x = highlighted_rectangle.get_x() + highlighted_rectangle.get_width() / 2
+                y = highlighted_rectangle.get_height()
+
+                # Add a marker on top of the highlighted rectangle
+                ax.scatter(x, y, color='black', marker='o', zorder=3)
+
+                ax.set_xticks([])
+                ax.set_title('Image '+str(c+1))
+                c+=1
+        axes[1,1].legend(title='Models',loc='lower center',bbox_to_anchor=(0.5,0.5))
+        canvas.figure.suptitle("Histogram-Intersection Comparison")
+
 class VisualizeClus:
     def __init__(self,n_clusters):
         self.top=tk.Toplevel()
+        iconPath = self.resource_path('visual_lens.ico')
+        self.top.iconbitmap(iconPath)
+        self.top.iconify()
         self.notebook=ttk.Notebook(self.top)
-        self.top.geometry('672x576')
+        self.top.geometry('672x672')
         self.notebook.pack(expand=True,fill='both')
         self.n_clusters=n_clusters
         self.names=[]
@@ -411,6 +509,15 @@ class VisualizeClus:
         self.coh_index=[]
         self.sep_index=[]
         self.dunn_index=[]
+    def resource_path(delf,relative_path):
+        """ Get absolute path to resource, works for dev and for PyInstaller """
+        try:
+            # PyInstaller creates a temp folder and stores path in _MEIPASS
+            base_path = sys._MEIPASS
+        except Exception:
+            base_path = os.path.abspath(".")
+
+        return os.path.join(base_path, relative_path)
 
     def plot_results(self,images_df,name,mat,y_labels):
         self.tab=TabClus(self.notebook)
@@ -482,7 +589,7 @@ class VisualizeClus:
         tab=TabClus(self.notebook)
         tab.barplot(self.db_index,self.ch_index,self.coh_index,self.sep_index,self.dunn_index,self.names)
         self.notebook.add(tab,text="Comparison")
-
+        self.top.deiconify()
 
 class TabClus(tk.Frame):
     def __init__(self, parent):
@@ -504,6 +611,8 @@ class TabClus(tk.Frame):
         canvas_widget = canvas.get_tk_widget()
         canvas_widget.pack(side=tk.TOP, fill=tk.BOTH,padx=10,pady=10,ipadx=10,ipady=10)
         canvas.draw()
+        toolbar=NavigationToolbar2Tk(canvas,self.innercanvas,pack_toolbar=False)
+        toolbar.pack(anchor='w',fill='x')
         return canvas
     def dendo(self,mat):
         from scipy.cluster.hierarchy import ward,dendrogram
