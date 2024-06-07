@@ -6,6 +6,7 @@ from tkinter import messagebox
 from similarity import *
 from clustering import *
 import pickle
+import sys
 
 class checkOptions(tk.Frame):
     def __init__(self, parent=None, picks=[], anchor=tk.W):
@@ -194,7 +195,7 @@ class Classification(tk.Frame):
         tk.Button(f,text="Browse ",command=self.openfile).pack(side="right",anchor="e",fill='x',expand=True)
 
         tk.Label(self,text="Machine Learning Algorithms :").pack(side="top",anchor="w")
-        self.mloptions = checkOptions(self,["Naive Bayes Model","Decision Tree Model","Random Forest Model","Bagging Model"])
+        self.mloptions = checkOptions(self,["Naive Bayes Model","Decision Tree Model","Random Forest Model"])
         self.mloptions.pack(side=tk.TOP,  fill=tk.X,anchor="w")
         self.mloptions.config(relief=tk.GROOVE, bd=2,padx=10,pady=10)
 
@@ -310,10 +311,7 @@ class Classification(tk.Frame):
                     rfc,fy_pred,fy_probas,fname,fcategory,x,y,y_test=self.cobj.forest(item)
                     self.vis.plot_results(rfc,fy_pred,fy_probas,fname,fcategory,x,y,y_test)
                     self.count+=1
-                else:
-                    bc,by_pred,by_probas,bname,bcategory,x,y,y_test=self.cobj.bag(item)
-                    self.vis.plot_results(bc,by_pred,by_probas,bname,bcategory,x,y,y_test)
-                    self.count+=1
+
     def execute(self):
         self.cobj=Classify(self.category_file,self.image_dir,self.test)
         chosen=self.allstates()
@@ -568,10 +566,20 @@ class Start(tk.Frame):
             go=Clustering
         controller.show_frame(go)
   
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 app=Container()
 app.title("Visual-Lens")
-app.iconbitmap('C:\\Users\\Sabiha\\Desktop\\Project\\visual_lens.ico')
+iconPath = resource_path('visual_lens.ico')
+app.iconbitmap(iconPath)
 
 app.mainloop()
 
