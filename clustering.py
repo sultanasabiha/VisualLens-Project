@@ -4,6 +4,7 @@ import pandas
 import os
 from keras.preprocessing import image as kimage
 
+
 class Cluster:
     def __init__(self,image_dir,n_clusters):
 
@@ -38,26 +39,26 @@ class Cluster:
         title="K-Means"+self.name
         kmeans=KMeans(n_clusters=self.n_clusters,random_state=10)
         y_means=kmeans.fit_predict(image_matrix)
-        print("The cluster of images:",y_means)
+        #print("The cluster of images:",y_means)
 
         paths=list(self.images_dict.keys())
         data={'Path':paths,'Predicted':y_means}
         kmeansdf=pandas.DataFrame(data,columns=['Path','Predicted'])
         #Storing in a dataframe so the images can be accessed according to their predicted cluster 
-        print("Details of clusters are:\n",kmeansdf["Predicted"].value_counts())
+        #print("Details of clusters are:\n",kmeansdf["Predicted"].value_counts())
 
         return kmeansdf,title,y_means
     def agglo(self,image_matrix):
         title="Agglomerative Hierarchical Clustering"+self.name
         agglo=AgglomerativeClustering(n_clusters=self.n_clusters)
         y_agglo=agglo.fit_predict(image_matrix)
-        print("The cluster of images:",y_agglo)
+        #print("The cluster of images:",y_agglo)
 
         paths=list(self.images_dict.keys())
         data={'Path':paths,'Predicted':y_agglo}
         agglodf=pandas.DataFrame(data,columns=['Path','Predicted'])
         #Storing in a dataframe so the images can be accessed according to their predicted cluster 
-        print("Details of clusters are:\n",agglodf["Predicted"].value_counts())
+        #print("Details of clusters are:\n",agglodf["Predicted"].value_counts())
 
         return agglodf,title,y_agglo
         
@@ -65,13 +66,13 @@ class Cluster:
         title="Spectral Clustering"+self.name
         spec=SpectralClustering(n_clusters=self.n_clusters)
         y_spec=spec.fit_predict(image_matrix)
-        print("The cluster of images:",y_spec)
+        #print("The cluster of images:",y_spec)
 
         paths=list(self.images_dict.keys())
         data={'Path':paths,'Predicted':y_spec}
         agglodf=pandas.DataFrame(data,columns=['Path','Predicted'])
         #Storing in a dataframe so the images can be accessed according to their predicted cluster 
-        print("Details of clusters are:\n",agglodf["Predicted"].value_counts())
+        #print("Details of clusters are:\n",agglodf["Predicted"].value_counts())
 
         return agglodf,title,y_spec
 
@@ -115,34 +116,34 @@ class Cluster:
         self.name=" with VGG16"
 
         from keras.applications.vgg16 import preprocess_input
-        from keras.applications import vgg16
+        from keras.applications import VGG16
 
-        vgg16_model=vgg16(include_top=False,weights='imagenet')
+        vgg16_model=VGG16(include_top=False,weights='imagenet')
         vgg16_matrix=numpy.zeros([len(self.images_dict),25088])
         i=0
         #Process all images according to MobileNet Algorithm
-        for filename in os.listdir(self.image_dir):
+        for filename in os.listdir(self.images_dir):
             mix_image = self.images_dir+'/' +filename
             image=kimage.load_img(mix_image,target_size=(224,224))
-            iage=preprocess_input(numpy.expand_dims(kimage.img_to_array(image),axis=0))
+            image=preprocess_input(numpy.expand_dims(kimage.img_to_array(image),axis=0))
             vgg16_matrix[i,:]=vgg16_model.predict(image).ravel()
             i+=1
-        return 
+        return vgg16_matrix
     
     def vgg19(self):
         self.name=" with VGG19"
 
         from keras.applications.vgg19 import preprocess_input
-        from keras.applications import vgg19
+        from keras.applications import VGG19
 
-        vgg19_model=vgg19(include_top=False,weights='imagenet')
+        vgg19_model=VGG19(include_top=False,weights='imagenet')
         vgg19_matrix=numpy.zeros([len(self.images_dict),25088])
         i=0
         #Process all images according to MobileNet Algorithm
-        for filename in os.listdir(self.image_dir):
+        for filename in os.listdir(self.images_dir):
             mix_image = self.images_dir+'/' +filename
             image=kimage.load_img(mix_image,target_size=(224,224))
-            iage=preprocess_input(numpy.expand_dims(kimage.img_to_array(image),axis=0))
+            image=preprocess_input(numpy.expand_dims(kimage.img_to_array(image),axis=0))
             vgg19_matrix[i,:]=vgg19_model.predict(image).ravel()
             i+=1
         return vgg19_matrix
