@@ -255,20 +255,4 @@ class Classify:
         forest_value=forest_pred_item[0]
         return forest_model,forest_pred,y_probas,title,self.categories[forest_value],self.x_trg,self.y_trg,self.y_test
 
-    def bag(self,item):
-        title="Bagging Model"+self.name
-        #Creating Bagging model
-        from sklearn.ensemble import BaggingClassifier
-        print("---------------------------Bagging Model----------------------------")
-        bag_model=BaggingClassifier(estimator=None,n_estimators=10,max_samples=1.0,max_features=1.0,bootstrap=True)
-        bag_model.fit(self.x_trg,self.y_trg)
 
-        #Determining accuracy and creating confusion matrix of the model
-        bag_pred=bag_model.predict(self.x_test)
-        y_probas = bag_model.predict_proba(self.x_test)
-
-        #Determining accuracy of the test image
-        bag_pred_item=bag_model.predict(item)
-        bag_value=bag_pred_item[0]
-
-        return bag_model,bag_pred,y_probas,title,self.categories[bag_value],self.x_trg,self.y_trg,self.y_test
