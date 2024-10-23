@@ -83,7 +83,7 @@ To install the required dependencies and run this project on your local machine:
 
   This will launch the GUI Interface. The GUI will present the various options for different tasks: Image Similarity, Image 	Classification or Image Clustering.
   <p align="center">
-    <img src="images/start.png" alt="Start Page" height=600/>
+    <img src="images/start.png" alt="Start Page" height=500 width=20%/>
   </p>
 
 2. Select a Task:
@@ -96,9 +96,9 @@ To install the required dependencies and run this project on your local machine:
 	-Select classification type in case of Image classification.
 	-Enter the number of clusters in case of Image clustering.
 <p float="left" align="center">
-  <img src="images/class.png" alt="Classification Page" height=600 hspace="20"/>
-  <img src="images/sim.png" alt="Similarity Page" height=600 hspace="20" /> 
-  <img src="images/clus.png" alt="Clustering Page" height=600 hspace="20" />
+  <img src="images/class.png" alt="Classification Page" height=500 width=20% hspace="20"/>
+  <img src="images/sim.png" alt="Similarity Page" height=500 width=20% hspace="20" /> 
+  <img src="images/clus.png" alt="Clustering Page" height=500 width=20% hspace="20" />
 </p>
 
 4. Upload Necessary Files:
@@ -115,9 +115,8 @@ To install the required dependencies and run this project on your local machine:
 
 6. Upload personalized algorithms (if required):
   Customized algorithms can be uploaded by loading the required serialized pickle file as 	mentioned in the instructions. We can add/remove them as required.
-  <p style="display: flex; align-items: center; justify-content: center;">
-      <img src="images/palgo.png" alt="Pickling instructions" height=300 hspace="20"/>
-      <img src="images/CLASSRE1.png" alt="classification page with augmented personalized algorithms" height=700 hspace="20"/>
+  <p float="left" align="center">
+      <img src="images/perso.png" alt="Pickling instructions"/>
   </p>
 
 7. Execute the Task:
@@ -170,7 +169,10 @@ Visualizations are used to present the results of image analysis tasks, such as 
 5. Module: gui.py 
 The application features a user-friendly interface with a start screen that allows users to select tasks such as Similarity, Classification, and Clustering. Smooth navigation between modules ensures easy task switching. Additionally, a file browsing feature simplifies uploading datasets and algorithms, allowing users to integrate their data and custom algorithms seamlessly.
 
-![Architecture](images/dataflow2.png)
+<p align="center">
+<img src="images/dataflow2.png" alt="Architecture" />
+</p>
+
 
 ---
 
