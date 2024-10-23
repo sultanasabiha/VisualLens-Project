@@ -66,14 +66,16 @@ class Similarity(tk.Frame):
     def load_pickle(self):
         self.flag=True
         pickle_file=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select the file to be deserialized --", filetypes=(("All Files", "*.*"),("Python Files",".py"),("Pickle Files",".pkl")))
-
-        # Deserialize the tuple from the file
-        with open(pickle_file, 'rb') as f:
-            Name,Images_list= pickle.load(f)
-        self.Name.append(Name)
-        self.Images_list.append(Images_list)
-    
-        self.add_option(Name,len(self.Name))
+        if pickle_file =="":
+            messagebox.showwarning("Warning","Pickle file not uploaded")
+        else:
+            # Deserialize the tuple from the file
+            with open(pickle_file, 'rb') as f:
+                Name,Images_list= pickle.load(f)
+            self.Name.append(Name)
+            self.Images_list.append(Images_list)
+        
+            self.add_option(Name,len(self.Name))
     def add_option(self,option_text,index):
         # Create a frame to hold the option and its button
         option_frame = tk.Frame(self.p_frame)
@@ -225,26 +227,28 @@ class Classification(tk.Frame):
         self.Name,self.Classifier, self.x_train,self.y_train,self.y_test,self.y_pred,self.y_probas,self.category_timg=[],[],[],[],[],[],[],[]
         self.options=[]
     def show_info(self):
-        items = ['Name of the algorithm as Name','Classifier','y_pred', 'y_probas','x_train', 'y_train', 'y_test','Category of test image as category_timg']
+        items = ['Name of the algorithm as Name','Classifier object as Classifier','Predicted y-values as y_pred', 'Probabality of y-values as y_probas','Training set of x-values as x_train', 'Training set of y-values as y_train', 'Testing set of y-values as y_test','Category of test image as category_timg']
         formatted_list = '\n\n'.join(f'• {item}' for item in items)
         messagebox.showinfo("Uploading Personalized Algorithms","Please upload the algorithm by pickling the following data with the same name and order as mentioned into a tuple:\n\n"+formatted_list)
     def load_pickle(self):
         self.flag=True
         pickle_file=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select the file to be deserialized --", filetypes=(("All Files", "*.*"),("Python Files",".py"),("Pickle Files",".pkl")))
-
+        if pickle_file =="":
+            messagebox.showwarning("Warning","Pickle file not uploaded")
+        else:
         # Deserialize the tuple from the file
-        with open(pickle_file, 'rb') as f:
-            Name,Classifier,y_pred,y_probas,x_train,y_train,y_test,category_timg= pickle.load(f)
-        self.Name.append(Name)
-        self.Classifier.append(Classifier)
-        self.x_train.append(x_train)
-        self.y_train.append(y_train)
-        self.y_test.append(y_test)
-        self.y_pred.append(y_pred)
-        self.y_probas.append(y_probas)
-        self.category_timg.append(category_timg)
+            with open(pickle_file, 'rb') as f:
+                Name,Classifier,y_pred,y_probas,x_train,y_train,y_test,category_timg= pickle.load(f)
+            self.Name.append(Name)
+            self.Classifier.append(Classifier)
+            self.x_train.append(x_train)
+            self.y_train.append(y_train)
+            self.y_test.append(y_test)
+            self.y_pred.append(y_pred)
+            self.y_probas.append(y_probas)
+            self.category_timg.append(category_timg)
 
-        self.add_option(Name,len(self.Name))
+            self.add_option(Name,len(self.Name))
     def add_option(self,option_text,index):
         # Create a frame to hold the option and its button
         option_frame = tk.Frame(self.p_frame)
@@ -401,22 +405,24 @@ class Clustering(tk.Frame):
         self.options=[]
 
     def show_info(self):
-        items = ['Name of the algorithm as Name','Results of clustering containing a Path column(path to the image) and a Predicted column(predicted class of that image)','Matrix containing all the loaded images as Image_matrix','y_result']
+        items = ['Name of the algorithm as Name','Pandas dataframe of clustering result containing a Path column(path to the image) and a Predicted column(predicted class of that image) as results_df','Matrix containing all the loaded images as Image_matrix','Resultant matrix as y_result']
         formatted_list = '\n\n'.join(f'• {item}' for item in items)
         messagebox.showinfo("Uploading Personalized Algorithms","Please upload the algorithm by pickling the following data with the same name and order as mentioned into a tuple:\n\n"+formatted_list)
     def load_pickle(self):
         self.flag=True
         pickle_file=filedialog.askopenfilename(initialdir="c:\\Users\\Sabiha\\Desktop\\Project",title="Select the file to be deserialized --", filetypes=(("All Files", "*.*"),("Python Files",".py"),("Pickle Files",".pkl")))
+        if pickle_file =="":
+            messagebox.showwarning("Warning","Pickle file not uploaded")
+        else:
+            # Deserialize the tuple from the file
+            with open(pickle_file, 'rb') as f:
+                Name,results_df,Images_matrix,y_result= pickle.load(f)
+            self.Name.append(Name)
+            self.results_df.append(results_df)
+            self.Images_matrix.append(Images_matrix)
+            self.y_result.append(y_result)
 
-        # Deserialize the tuple from the file
-        with open(pickle_file, 'rb') as f:
-            Name,results_df,Images_matrix,y_result= pickle.load(f)
-        self.Name.append(Name)
-        self.results_df.append(results_df)
-        self.Images_matrix.append(Images_matrix)
-        self.y_result.append(y_result)
-
-        self.add_option(Name,len(self.Name))
+            self.add_option(Name,len(self.Name))
     def add_option(self,option_text,index):
         # Create a frame to hold the option and its button
         option_frame = tk.Frame(self.p_frame)
