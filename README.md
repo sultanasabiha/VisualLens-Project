@@ -154,19 +154,19 @@ Once all the necessary files are uploaded and selections are set, click the "Exe
 ## **Architecture**
 
 
-1. Module: similarity.py
+1. Module: similarity.py <br>
 Implements all similarity algorithms along with tranfer learning algorithms, and returns the required data back to gui-module. 
 
-2. Module: classification.py
+2. Module: classification.py <br>
   Implements all classification algorithms along with tranfer learning algorithms, and returns the required data back to gui-module. 
 
-3. Module: clustering.py
+3. Module: clustering.py <br>
 Implements all clustering algorithms along with tranfer learning algorithms, and returns the required data back to gui-module.
 
-4. Module: visualize.py
+4. Module: visualize.py <br>
 Visualizations are used to present the results of image analysis tasks, such as image similarity scores, classification labels, clustered image groups, and to compare the performance of different machine learning algorithms and techniques. All of these are displayed in a secondary window.
 
-5. Module: gui.py 
+5. Module: gui.py <br>
 The application features a user-friendly interface with a start screen that allows users to select tasks such as Similarity, Classification, and Clustering. Smooth navigation between modules ensures easy task switching. Additionally, a file browsing feature simplifies uploading datasets and algorithms, allowing users to integrate their data and custom algorithms seamlessly.
 
 <p align="center">
