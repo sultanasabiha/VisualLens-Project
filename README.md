@@ -16,8 +16,8 @@ Utilizes machine learning algorithms such as **K-Means**, **Agglomerative hierar
 - **Transfer Learning**: 
 Provides transfer learning techniques using pre-trained models such as **MobileNet**, **ResNet50**, **VGG16**, and **VGG19**. The models serve a feature extractor and is used to augment the features extracted to the machine learning algorithms to significantly improve thier performance
 - **Interactive Visualization**:
-Presents results in an interactive graphical format, allowing users to interpret and compare the performance of different algorithms and techniques easily. Users can save the required metric visualization for future use.<br>
-    **Classification Metrics**:
+Presents results in an interactive graphical format, allowing users to interpret and compare the performance of different algorithms and techniques easily. Users can save the required metric visualization for future use.<br><br>
+    **Classification Metrics**:<br>
   For individual algorithms:
     - Confusion Matrix
     - Roc Curve
@@ -32,8 +32,7 @@ Presents results in an interactive graphical format, allowing users to interpret
     - Recall (Sensitivity)
     - F1-Score
   
-    **Clustering Metrics**:
-
+    **Clustering Metrics**:<br>
     For individual algorithms:
     - Dendrogram 
     - Silhoutte Diagram
@@ -46,7 +45,7 @@ Presents results in an interactive graphical format, allowing users to interpret
     - Davies-Doublin Index 
     - Calinski-Harabasz Index
     
-    **Image Similarity Metrics**:
+    **Image Similarity Metrics**:<br>
     For individual algorithms:
     - Most Similar 4 images along with the test image
  
