@@ -16,7 +16,7 @@ Utilizes machine learning algorithms such as **K-Means**, **Agglomerative hierar
 - **Transfer Learning**: 
 Provides transfer learning techniques using pre-trained models such as **MobileNet**, **ResNet50**, **VGG16**, and **VGG19**. The models serve a feature extractor and is used to augment the features extracted to the machine learning algorithms to significantly improve thier performance
 - **Interactive Visualization**:
-Presents results in an interactive graphical format, allowing users to interpret and compare the performance of different algorithms and techniques easily. Users can save the required metric visualization for future use.
+Presents results in an interactive graphical format, allowing users to interpret and compare the performance of different algorithms and techniques easily. Users can save the required metric visualization for future use.<br>
     **Classification Metrics**:
   For individual algorithms:
     - Confusion Matrix
